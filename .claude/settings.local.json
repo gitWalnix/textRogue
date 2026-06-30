@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node *)",
+      "PowerShell(mvn test *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(PLAN=\"C:/Programming Projects/Java/TextRogue/docs/superpowers/plans/2026-06-30-textrogue-phase-a.md\" && SCRIPTS=\"C:/Users/NinjaOfNix/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts\" && bash \"$SCRIPTS/task-brief\" \"$PLAN\" 6)",
+      "Bash(bash __TRACKED_VAR__/review-package bd9503a ce80abf)",
+      "Bash(PLAN=\"C:/Programming Projects/Java/TextRogue/docs/superpowers/plans/2026-06-30-textrogue-phase-a.md\" && SCRIPTS=\"C:/Users/NinjaOfNix/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts\" && bash \"$SCRIPTS/task-brief\" \"$PLAN\" 7)",
+      "Bash(bash __TRACKED_VAR__/review-package ce80abf 1ee11ee)"
+    ]
+  }
+}
