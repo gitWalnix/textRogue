@@ -53,7 +53,7 @@ public class Game {
 
     private void descend() {
         player.descendFloor();
-        dungeon = new DungeonGenerator(System.currentTimeMillis()).generate();
+        dungeon = new DungeonGenerator(System.currentTimeMillis() + player.getFloor()).generate();
         player.moveTo(dungeon.getStartX(), dungeon.getStartY());
     }
 
