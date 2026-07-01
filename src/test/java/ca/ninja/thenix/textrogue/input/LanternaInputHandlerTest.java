@@ -65,4 +65,9 @@ class LanternaInputHandlerTest {
     void noPendingKeyReturnsUnknown() throws IOException {
         assertEquals(Command.UNKNOWN, handlerWithNoKey().pollCommand());
     }
+
+    @Test
+    void spaceKeyReturnsShoot() throws IOException {
+        assertEquals(Command.SHOOT, handlerWithKey(new KeyStroke(' ', false, false)).pollCommand());
+    }
 }

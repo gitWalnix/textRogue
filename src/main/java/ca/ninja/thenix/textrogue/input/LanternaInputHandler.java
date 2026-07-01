@@ -41,6 +41,7 @@ public class LanternaInputHandler implements InputHandler {
                     case 'a' -> Command.MOVE_LEFT;
                     case 'd' -> Command.MOVE_RIGHT;
                     case 'q' -> Command.QUIT;
+                    case ' ' -> Command.SHOOT;
                     default  -> Command.UNKNOWN;
                 };
             }
