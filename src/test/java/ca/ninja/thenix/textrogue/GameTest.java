@@ -260,4 +260,23 @@ class GameTest {
         assertEquals(1, game.projectiles.size());
         assertEquals(42, game.projectiles.get(0).getX());
     }
+
+    @Test
+    void playerDeathStopsLoopAndRendersDeathScreen() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12);
+        Player player = new Player(40, 12);
+        player.takeDamage(player.getHp());
+        boolean[] deathRendered = {false};
+        Renderer capturingRenderer = new Renderer() {
+            public void render(Dungeon d, Player p, List<Enemy> e, List<Projectile> pr) {}
+            public void renderDeath(Player p) { deathRendered[0] = true; }
+            public void close() {}
+        };
+        Game game = new Game(() -> Command.UNKNOWN, capturingRenderer);
+        game.dungeon = dungeon;
+        game.player = player;
+        game.start();
+        assertTrue(deathRendered[0]);
+        assertFalse(game.isRunning());
+    }
 }

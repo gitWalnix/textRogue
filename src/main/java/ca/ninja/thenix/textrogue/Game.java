@@ -42,9 +42,11 @@ public class Game {
     }
 
     public void start() {
-        dungeon = new DungeonGenerator(System.currentTimeMillis()).generate();
-        player = new Player(dungeon.getStartX(), dungeon.getStartY());
-        spawnEnemies();
+        if (dungeon == null) {
+            dungeon = new DungeonGenerator(System.currentTimeMillis()).generate();
+            player = new Player(dungeon.getStartX(), dungeon.getStartY());
+            spawnEnemies();
+        }
         running = true;
         renderer.render(dungeon, player, enemies, projectiles);
         while (running) {
@@ -52,6 +54,11 @@ public class Game {
             processCommand(input.pollCommand());
             gameTick();
             renderer.render(dungeon, player, enemies, projectiles);
+            if (player.isDead()) {
+                renderer.renderDeath(player);
+                running = false;
+                break;
+            }
             long sleep = TICK_MS - (System.currentTimeMillis() - tickStart);
             if (running && sleep > 0) {
                 try {
