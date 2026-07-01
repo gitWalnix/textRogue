@@ -22,6 +22,8 @@ public class Game {
     static final int ENEMY_HP = 4;
     static final int PROJECTILE_RANGE = 5;
     static final int SHOOT_COOLDOWN_TICKS = 5;
+    static final int CHASE_RADIUS = 6;
+    static final int ENEMY_CONTACT_DAMAGE = 2;
 
     private final InputHandler input;
     private final Renderer renderer;
@@ -88,7 +90,44 @@ public class Game {
         return null;
     }
 
-    void gameTick() {}
+    void gameTick() {
+        if (shootCooldown > 0) shootCooldown--;
+        moveEnemies();
+    }
+
+    private void moveEnemies() {
+        java.util.Set<Long> occupied = new java.util.HashSet<>();
+        for (Enemy e : enemies) {
+            if (e.isAlive()) occupied.add(tileKey(e.getX(), e.getY()));
+        }
+
+        for (Enemy enemy : enemies) {
+            if (!enemy.isAlive()) continue;
+
+            int distX = Math.abs(enemy.getX() - player.getX());
+            int distY = Math.abs(enemy.getY() - player.getY());
+            if (Math.max(distX, distY) > CHASE_RADIUS) continue;
+
+            int[] step = chaseStep(enemy.getX(), enemy.getY(), player.getX(), player.getY());
+            int nx = enemy.getX() + step[0];
+            int ny = enemy.getY() + step[1];
+
+            if (nx == player.getX() && ny == player.getY()) {
+                player.takeDamage(ENEMY_CONTACT_DAMAGE);
+                continue;
+            }
+            if (dungeon.getTile(nx, ny) == Tile.WALL) continue;
+            if (occupied.contains(tileKey(nx, ny))) continue;
+
+            occupied.remove(tileKey(enemy.getX(), enemy.getY()));
+            occupied.add(tileKey(nx, ny));
+            enemy.moveTo(nx, ny);
+        }
+    }
+
+    private static long tileKey(int x, int y) {
+        return ((long) y << 32) | (x & 0xffffffffL);
+    }
 
     void spawnEnemies() {
         enemies.clear();

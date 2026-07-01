@@ -180,4 +180,40 @@ class GameTest {
         game.processCommand(Command.SHOOT);
         assertEquals(1, game.projectiles.size());
     }
+
+    @Test
+    void enemyWithinRadiusStepsTowardPlayer() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12, 41, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        Enemy enemy = new Enemy(42, 12, 4);
+        game.enemies.add(enemy);
+        game.gameTick();
+        assertEquals(41, enemy.getX());
+        assertEquals(12, enemy.getY());
+    }
+
+    @Test
+    void enemyOutsideRadiusDoesNotMove() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12, 60, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        Enemy enemy = new Enemy(60, 12, 4);
+        game.enemies.add(enemy);
+        game.gameTick();
+        assertEquals(60, enemy.getX());
+    }
+
+    @Test
+    void adjacentEnemyDamagesPlayerInsteadOfMoving() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12, 41, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        Enemy enemy = new Enemy(41, 12, 4);
+        game.enemies.add(enemy);
+        int startHp = player.getHp();
+        game.gameTick();
+        assertEquals(startHp - 2, player.getHp());
+        assertEquals(41, enemy.getX());
+    }
 }
