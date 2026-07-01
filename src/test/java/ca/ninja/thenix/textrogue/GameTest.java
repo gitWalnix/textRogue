@@ -216,4 +216,48 @@ class GameTest {
         assertEquals(startHp - 2, player.getHp());
         assertEquals(41, enemy.getX());
     }
+
+    @Test
+    void projectileDamagesEnemyInPath() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12, 41, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        Enemy enemy = new Enemy(41, 12, 4);
+        game.enemies.add(enemy);
+        game.projectiles.add(new Projectile(41, 12, Facing.RIGHT, 5));
+        game.gameTick();
+        assertEquals(2, enemy.getHp());
+        assertTrue(game.projectiles.isEmpty());
+    }
+
+    @Test
+    void projectileRemovedWhenHittingWall() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        game.projectiles.add(new Projectile(41, 12, Facing.RIGHT, 5));
+        game.gameTick();
+        assertTrue(game.projectiles.isEmpty());
+    }
+
+    @Test
+    void projectileRemovedAfterExhaustingRange() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12, 41, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        game.projectiles.add(new Projectile(41, 12, Facing.RIGHT, 0));
+        game.gameTick();
+        assertTrue(game.projectiles.isEmpty());
+    }
+
+    @Test
+    void projectileAdvancesWhenPathIsClear() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12, 41, 12, 42, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        game.projectiles.add(new Projectile(41, 12, Facing.RIGHT, 5));
+        game.gameTick();
+        assertEquals(1, game.projectiles.size());
+        assertEquals(42, game.projectiles.get(0).getX());
+    }
 }

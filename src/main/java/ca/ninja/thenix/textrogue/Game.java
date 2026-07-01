@@ -24,6 +24,7 @@ public class Game {
     static final int SHOOT_COOLDOWN_TICKS = 5;
     static final int CHASE_RADIUS = 6;
     static final int ENEMY_CONTACT_DAMAGE = 2;
+    static final int PROJECTILE_DAMAGE = 2;
 
     private final InputHandler input;
     private final Renderer renderer;
@@ -93,6 +94,30 @@ public class Game {
     void gameTick() {
         if (shootCooldown > 0) shootCooldown--;
         moveEnemies();
+        advanceProjectiles();
+    }
+
+    private void advanceProjectiles() {
+        java.util.Iterator<Projectile> it = projectiles.iterator();
+        while (it.hasNext()) {
+            Projectile p = it.next();
+            Tile tile = dungeon.getTile(p.getX(), p.getY());
+            if (tile == Tile.WALL) {
+                it.remove();
+                continue;
+            }
+            Enemy hit = enemyAt(p.getX(), p.getY());
+            if (hit != null) {
+                hit.takeDamage(PROJECTILE_DAMAGE);
+                it.remove();
+                continue;
+            }
+            if (p.getRemainingRange() <= 0) {
+                it.remove();
+                continue;
+            }
+            p.advance();
+        }
     }
 
     private void moveEnemies() {
