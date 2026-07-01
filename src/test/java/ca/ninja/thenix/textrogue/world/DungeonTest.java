@@ -50,4 +50,31 @@ class DungeonTest {
         assertEquals(10, dungeon.getStartX());
         assertEquals(7, dungeon.getStartY());
     }
+
+    @Test
+    void tilesStartUnexplored() {
+        Dungeon dungeon = new Dungeon(allWalls(), List.of(), 0, 0);
+        assertFalse(dungeon.isExplored(5, 5));
+    }
+
+    @Test
+    void markExploredMakesTileExplored() {
+        Dungeon dungeon = new Dungeon(allWalls(), List.of(), 0, 0);
+        dungeon.markExplored(5, 5);
+        assertTrue(dungeon.isExplored(5, 5));
+        assertFalse(dungeon.isExplored(6, 5));
+    }
+
+    @Test
+    void markExploredOutOfBoundsDoesNotThrow() {
+        Dungeon dungeon = new Dungeon(allWalls(), List.of(), 0, 0);
+        assertDoesNotThrow(() -> dungeon.markExplored(-1, -1));
+    }
+
+    @Test
+    void isExploredOutOfBoundsReturnsFalse() {
+        Dungeon dungeon = new Dungeon(allWalls(), List.of(), 0, 0);
+        assertFalse(dungeon.isExplored(-1, 0));
+        assertFalse(dungeon.isExplored(0, Dungeon.HEIGHT));
+    }
 }
