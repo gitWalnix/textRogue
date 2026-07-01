@@ -8,12 +8,16 @@ import ca.ninja.thenix.textrogue.gen.DungeonGenerator;
 import ca.ninja.thenix.textrogue.input.Command;
 import ca.ninja.thenix.textrogue.input.InputHandler;
 import ca.ninja.thenix.textrogue.render.Renderer;
+import ca.ninja.thenix.textrogue.vision.RadiusVisibilityCalculator;
+import ca.ninja.thenix.textrogue.vision.VisibilityCalculator;
 import ca.ninja.thenix.textrogue.world.Dungeon;
+import ca.ninja.thenix.textrogue.world.Position;
 import ca.ninja.thenix.textrogue.world.Room;
 import ca.ninja.thenix.textrogue.world.Tile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 public class Game {
     static final int TICK_MS = 200;
@@ -26,6 +30,7 @@ public class Game {
     static final int ENEMY_CONTACT_DAMAGE = 2;
     static final int PROJECTILE_DAMAGE = 2;
     static final int DEATH_SCREEN_DISPLAY_MS = 3000;
+    static final int VISIBILITY_RADIUS = 8;
 
     private final InputHandler input;
     private final Renderer renderer;
@@ -34,6 +39,7 @@ public class Game {
     List<Enemy> enemies = new ArrayList<>();
     List<Projectile> projectiles = new ArrayList<>();
     private final Random random = new Random();
+    private final VisibilityCalculator visibilityCalculator = new RadiusVisibilityCalculator(VISIBILITY_RADIUS);
     private boolean running;
     private int shootCooldown = 0;
 
@@ -49,12 +55,12 @@ public class Game {
             spawnEnemies();
         }
         running = true;
-        renderer.render(dungeon, player, enemies, projectiles);
+        renderer.render(dungeon, player, enemies, projectiles, updateVisibility());
         while (running) {
             long tickStart = System.currentTimeMillis();
             processCommand(input.pollCommand());
             gameTick();
-            renderer.render(dungeon, player, enemies, projectiles);
+            renderer.render(dungeon, player, enemies, projectiles, updateVisibility());
             if (player.isDead()) {
                 renderer.renderDeath(player);
                 running = false;
@@ -165,6 +171,12 @@ public class Game {
 
     private static long tileKey(int x, int y) {
         return ((long) y << 32) | (x & 0xffffffffL);
+    }
+
+    Set<Position> updateVisibility() {
+        Set<Position> visible = visibilityCalculator.computeVisibleTiles(dungeon, player.getX(), player.getY());
+        for (Position p : visible) dungeon.markExplored(p.x(), p.y());
+        return visible;
     }
 
     void spawnEnemies() {

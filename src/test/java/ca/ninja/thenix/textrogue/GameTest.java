@@ -8,16 +8,18 @@ import ca.ninja.thenix.textrogue.input.Command;
 import ca.ninja.thenix.textrogue.input.InputHandler;
 import ca.ninja.thenix.textrogue.render.Renderer;
 import ca.ninja.thenix.textrogue.world.Dungeon;
+import ca.ninja.thenix.textrogue.world.Position;
 import ca.ninja.thenix.textrogue.world.Room;
 import ca.ninja.thenix.textrogue.world.Tile;
 import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 class GameTest {
     private static final Renderer NULL_RENDERER = new Renderer() {
-        public void render(Dungeon d, Player p, List<Enemy> enemies, List<Projectile> projectiles) {}
+        public void render(Dungeon d, Player p, List<Enemy> enemies, List<Projectile> projectiles, Set<Position> visibleTiles) {}
         public void renderDeath(Player p) {}
         public void close() {}
     };
@@ -268,7 +270,7 @@ class GameTest {
         player.takeDamage(player.getHp());
         boolean[] deathRendered = {false};
         Renderer capturingRenderer = new Renderer() {
-            public void render(Dungeon d, Player p, List<Enemy> e, List<Projectile> pr) {}
+            public void render(Dungeon d, Player p, List<Enemy> e, List<Projectile> pr, Set<Position> visibleTiles) {}
             public void renderDeath(Player p) { deathRendered[0] = true; }
             public void close() {}
         };
@@ -282,5 +284,17 @@ class GameTest {
         assertFalse(game.isRunning());
         assertTrue(elapsed >= Game.DEATH_SCREEN_DISPLAY_MS,
                 "death screen should stay visible for at least " + Game.DEATH_SCREEN_DISPLAY_MS + "ms, was " + elapsed);
+    }
+
+    @Test
+    void updateVisibilityMarksTilesWithinRadiusExplored() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        Set<Position> visible = game.updateVisibility();
+        assertTrue(dungeon.isExplored(40, 12));
+        assertTrue(visible.contains(new Position(40, 12)));
+        assertTrue(dungeon.isExplored(40 + Game.VISIBILITY_RADIUS, 12));
+        assertFalse(dungeon.isExplored(40 + Game.VISIBILITY_RADIUS + 1, 12));
     }
 }

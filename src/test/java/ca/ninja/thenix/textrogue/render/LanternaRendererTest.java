@@ -5,24 +5,28 @@ import ca.ninja.thenix.textrogue.entity.Facing;
 import ca.ninja.thenix.textrogue.entity.Player;
 import ca.ninja.thenix.textrogue.entity.Projectile;
 import ca.ninja.thenix.textrogue.world.Dungeon;
+import ca.ninja.thenix.textrogue.world.Position;
 import ca.ninja.thenix.textrogue.world.Tile;
 import com.googlecode.lanterna.TerminalPosition;
 import com.googlecode.lanterna.TerminalSize;
+import com.googlecode.lanterna.TextColor;
 import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.virtual.DefaultVirtualTerminal;
 import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 class LanternaRendererTest {
 
-    private DefaultVirtualTerminal renderTo(Dungeon dungeon, Player player, List<Enemy> enemies, List<Projectile> projectiles) throws IOException {
+    private DefaultVirtualTerminal renderTo(Dungeon dungeon, Player player, List<Enemy> enemies, List<Projectile> projectiles, Set<Position> visibleTiles) throws IOException {
         DefaultVirtualTerminal terminal = new DefaultVirtualTerminal(new TerminalSize(80, 25));
         TerminalScreen screen = new TerminalScreen(terminal);
         screen.startScreen();
-        new LanternaRenderer(screen).render(dungeon, player, enemies, projectiles);
+        new LanternaRenderer(screen).render(dungeon, player, enemies, projectiles, visibleTiles);
         return terminal;
     }
 
@@ -39,27 +43,37 @@ class LanternaRendererTest {
         return new Dungeon(tiles, List.of(), x, y);
     }
 
+    private Set<Position> allVisible() {
+        Set<Position> visible = new HashSet<>();
+        for (int y = 0; y < Dungeon.HEIGHT; y++) {
+            for (int x = 0; x < Dungeon.WIDTH; x++) {
+                visible.add(new Position(x, y));
+            }
+        }
+        return visible;
+    }
+
     @Test
     void wallTileRendersAsHash() throws IOException {
-        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(5, 5), List.of(), List.of());
+        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(5, 5), List.of(), List.of(), allVisible());
         assertEquals('#', t.getCharacter(new TerminalPosition(0, 0)).getCharacter());
     }
 
     @Test
     void floorTileRendersDot() throws IOException {
-        DefaultVirtualTerminal t = renderTo(withTileAt(2, 2, Tile.FLOOR), new Player(5, 5), List.of(), List.of());
+        DefaultVirtualTerminal t = renderTo(withTileAt(2, 2, Tile.FLOOR), new Player(5, 5), List.of(), List.of(), allVisible());
         assertEquals('.', t.getCharacter(new TerminalPosition(2, 2)).getCharacter());
     }
 
     @Test
     void stairsDownRendersGreaterThan() throws IOException {
-        DefaultVirtualTerminal t = renderTo(withTileAt(4, 4, Tile.STAIRS_DOWN), new Player(5, 5), List.of(), List.of());
+        DefaultVirtualTerminal t = renderTo(withTileAt(4, 4, Tile.STAIRS_DOWN), new Player(5, 5), List.of(), List.of(), allVisible());
         assertEquals('>', t.getCharacter(new TerminalPosition(4, 4)).getCharacter());
     }
 
     @Test
     void playerRendersAsFacingGlyphDefaultingDown() throws IOException {
-        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(3, 3), List.of(), List.of());
+        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(3, 3), List.of(), List.of(), allVisible());
         assertEquals('v', t.getCharacter(new TerminalPosition(3, 3)).getCharacter());
     }
 
@@ -67,20 +81,19 @@ class LanternaRendererTest {
     void playerRendersFacingGlyphWhenFacingUp() throws IOException {
         Player player = new Player(3, 3);
         player.setFacing(Facing.UP);
-        DefaultVirtualTerminal t = renderTo(allWalls(), player, List.of(), List.of());
+        DefaultVirtualTerminal t = renderTo(allWalls(), player, List.of(), List.of(), allVisible());
         assertEquals('^', t.getCharacter(new TerminalPosition(3, 3)).getCharacter());
     }
 
     @Test
     void statusLineShowsFloorNumber() throws IOException {
-        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(0, 0), List.of(), List.of());
-        // "Floor: 1 ..." is written at row Dungeon.HEIGHT (= 24), column 0
+        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(0, 0), List.of(), List.of(), allVisible());
         assertEquals('F', t.getCharacter(new TerminalPosition(0, Dungeon.HEIGHT)).getCharacter());
     }
 
     @Test
     void statusLineShowsHp() throws IOException {
-        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(0, 0), List.of(), List.of());
+        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(0, 0), List.of(), List.of(), allVisible());
         StringBuilder sb = new StringBuilder();
         for (int x = 0; x < 30; x++) sb.append(t.getCharacter(new TerminalPosition(x, Dungeon.HEIGHT)).getCharacter());
         assertTrue(sb.toString().contains("HP: 20/20"));
@@ -88,7 +101,7 @@ class LanternaRendererTest {
 
     @Test
     void enemyRendersAsE() throws IOException {
-        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(5, 5), List.of(new Enemy(3, 3, 4)), List.of());
+        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(5, 5), List.of(new Enemy(3, 3, 4)), List.of(), allVisible());
         assertEquals('e', t.getCharacter(new TerminalPosition(3, 3)).getCharacter());
     }
 
@@ -96,13 +109,13 @@ class LanternaRendererTest {
     void deadEnemyDoesNotRender() throws IOException {
         Enemy enemy = new Enemy(3, 3, 4);
         enemy.takeDamage(4);
-        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(5, 5), List.of(enemy), List.of());
+        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(5, 5), List.of(enemy), List.of(), allVisible());
         assertEquals('#', t.getCharacter(new TerminalPosition(3, 3)).getCharacter());
     }
 
     @Test
     void projectileRendersAsStar() throws IOException {
-        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(5, 5), List.of(), List.of(new Projectile(2, 2, Facing.UP, 5)));
+        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(5, 5), List.of(), List.of(new Projectile(2, 2, Facing.UP, 5)), allVisible());
         assertEquals('*', t.getCharacter(new TerminalPosition(2, 2)).getCharacter());
     }
 
@@ -115,5 +128,41 @@ class LanternaRendererTest {
         StringBuilder sb = new StringBuilder();
         for (int x = 0; x < Dungeon.WIDTH; x++) sb.append(terminal.getCharacter(new TerminalPosition(x, Dungeon.HEIGHT / 2)).getCharacter());
         assertTrue(sb.toString().contains("You died"));
+    }
+
+    @Test
+    void currentlyVisibleTileRendersNormalColor() throws IOException {
+        Dungeon dungeon = withTileAt(2, 2, Tile.FLOOR);
+        DefaultVirtualTerminal t = renderTo(dungeon, new Player(5, 5), List.of(), List.of(), Set.of(new Position(2, 2)));
+        assertEquals('.', t.getCharacter(new TerminalPosition(2, 2)).getCharacter());
+        assertEquals(TextColor.ANSI.WHITE, t.getCharacter(new TerminalPosition(2, 2)).getForegroundColor());
+    }
+
+    @Test
+    void exploredButNotVisibleTileRendersDimmed() throws IOException {
+        Dungeon dungeon = withTileAt(2, 2, Tile.FLOOR);
+        dungeon.markExplored(2, 2);
+        DefaultVirtualTerminal t = renderTo(dungeon, new Player(5, 5), List.of(), List.of(), Set.of());
+        assertEquals('.', t.getCharacter(new TerminalPosition(2, 2)).getCharacter());
+        assertEquals(TextColor.ANSI.BLACK_BRIGHT, t.getCharacter(new TerminalPosition(2, 2)).getForegroundColor());
+    }
+
+    @Test
+    void unexploredTileRendersBlank() throws IOException {
+        Dungeon dungeon = withTileAt(2, 2, Tile.FLOOR);
+        DefaultVirtualTerminal t = renderTo(dungeon, new Player(5, 5), List.of(), List.of(), Set.of());
+        assertEquals(' ', t.getCharacter(new TerminalPosition(2, 2)).getCharacter());
+    }
+
+    @Test
+    void enemyOutsideVisibleTilesDoesNotRender() throws IOException {
+        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(5, 5), List.of(new Enemy(3, 3, 4)), List.of(), Set.of());
+        assertEquals(' ', t.getCharacter(new TerminalPosition(3, 3)).getCharacter());
+    }
+
+    @Test
+    void projectileOutsideVisibleTilesDoesNotRender() throws IOException {
+        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(5, 5), List.of(), List.of(new Projectile(2, 2, Facing.UP, 5)), Set.of());
+        assertEquals(' ', t.getCharacter(new TerminalPosition(2, 2)).getCharacter());
     }
 }
