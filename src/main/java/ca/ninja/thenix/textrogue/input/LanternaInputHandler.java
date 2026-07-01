@@ -15,29 +15,41 @@ public class LanternaInputHandler implements InputHandler {
     @Override
     public Command pollCommand() {
         try {
-            KeyStroke key = screen.pollInput();
-            if (key == null) return Command.UNKNOWN;
-            return switch (key.getKeyType()) {
-                case Character -> {
-                    char c = Character.toLowerCase(key.getCharacter());
-                    yield switch (c) {
-                        case 'w' -> Command.MOVE_UP;
-                        case 's' -> Command.MOVE_DOWN;
-                        case 'a' -> Command.MOVE_LEFT;
-                        case 'd' -> Command.MOVE_RIGHT;
-                        case 'q' -> Command.QUIT;
-                        default  -> Command.UNKNOWN;
-                    };
-                }
-                case ArrowUp    -> Command.MOVE_UP;
-                case ArrowDown  -> Command.MOVE_DOWN;
-                case ArrowLeft  -> Command.MOVE_LEFT;
-                case ArrowRight -> Command.MOVE_RIGHT;
-                case EOF, Escape -> Command.QUIT;
-                default -> Command.UNKNOWN;
-            };
+            // Key-repeat while a key is held down can queue many keystrokes per
+            // tick; drain the whole queue and keep only the latest command so
+            // the backlog never outlives the key press.
+            Command result = Command.UNKNOWN;
+            KeyStroke key;
+            while ((key = screen.pollInput()) != null) {
+                Command cmd = toCommand(key);
+                if (cmd == Command.QUIT) return Command.QUIT;
+                if (cmd != Command.UNKNOWN) result = cmd;
+            }
+            return result;
         } catch (IOException e) {
             return Command.QUIT;
         }
+    }
+
+    private Command toCommand(KeyStroke key) {
+        return switch (key.getKeyType()) {
+            case Character -> {
+                char c = Character.toLowerCase(key.getCharacter());
+                yield switch (c) {
+                    case 'w' -> Command.MOVE_UP;
+                    case 's' -> Command.MOVE_DOWN;
+                    case 'a' -> Command.MOVE_LEFT;
+                    case 'd' -> Command.MOVE_RIGHT;
+                    case 'q' -> Command.QUIT;
+                    default  -> Command.UNKNOWN;
+                };
+            }
+            case ArrowUp    -> Command.MOVE_UP;
+            case ArrowDown  -> Command.MOVE_DOWN;
+            case ArrowLeft  -> Command.MOVE_LEFT;
+            case ArrowRight -> Command.MOVE_RIGHT;
+            case EOF, Escape -> Command.QUIT;
+            default -> Command.UNKNOWN;
+        };
     }
 }
