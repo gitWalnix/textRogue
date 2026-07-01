@@ -275,8 +275,12 @@ class GameTest {
         Game game = new Game(() -> Command.UNKNOWN, capturingRenderer);
         game.dungeon = dungeon;
         game.player = player;
+        long start = System.currentTimeMillis();
         game.start();
+        long elapsed = System.currentTimeMillis() - start;
         assertTrue(deathRendered[0]);
         assertFalse(game.isRunning());
+        assertTrue(elapsed >= Game.DEATH_SCREEN_DISPLAY_MS,
+                "death screen should stay visible for at least " + Game.DEATH_SCREEN_DISPLAY_MS + "ms, was " + elapsed);
     }
 }

@@ -25,6 +25,7 @@ public class Game {
     static final int CHASE_RADIUS = 6;
     static final int ENEMY_CONTACT_DAMAGE = 2;
     static final int PROJECTILE_DAMAGE = 2;
+    static final int DEATH_SCREEN_DISPLAY_MS = 3000;
 
     private final InputHandler input;
     private final Renderer renderer;
@@ -57,6 +58,11 @@ public class Game {
             if (player.isDead()) {
                 renderer.renderDeath(player);
                 running = false;
+                try {
+                    Thread.sleep(DEATH_SCREEN_DISPLAY_MS);
+                } catch (InterruptedException e) {
+                    // proceed to exit regardless
+                }
                 break;
             }
             long sleep = TICK_MS - (System.currentTimeMillis() - tickStart);
