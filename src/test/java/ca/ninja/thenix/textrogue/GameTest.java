@@ -126,4 +126,58 @@ class GameTest {
         assertTrue(game.projectiles.isEmpty());
         assertTrue(game.enemies.size() >= 3 && game.enemies.size() <= 5);
     }
+
+    @Test
+    void movingUpdatesFacing() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12, 40, 11);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        game.processCommand(Command.MOVE_UP);
+        assertEquals(Facing.UP, game.player.getFacing());
+    }
+
+    @Test
+    void facingUpdatesEvenWhenMoveBlockedByWall() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        game.processCommand(Command.MOVE_UP);
+        assertEquals(Facing.UP, game.player.getFacing());
+        assertEquals(12, game.player.getY());
+    }
+
+    @Test
+    void playerCannotMoveIntoLivingEnemy() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12, 40, 11);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        game.enemies.add(new Enemy(40, 11, 4));
+        game.processCommand(Command.MOVE_UP);
+        assertEquals(40, game.player.getX());
+        assertEquals(12, game.player.getY());
+    }
+
+    @Test
+    void shootSpawnsProjectileInFacingDirection() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12);
+        Player player = new Player(40, 12);
+        player.setFacing(Facing.UP);
+        Game game = gameWithInjectedState(dungeon, player);
+        game.processCommand(Command.SHOOT);
+        assertEquals(1, game.projectiles.size());
+        Projectile p = game.projectiles.get(0);
+        assertEquals(40, p.getX());
+        assertEquals(11, p.getY());
+        assertEquals(Facing.UP, p.getDirection());
+    }
+
+    @Test
+    void shootOnCooldownDoesNothing() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        game.processCommand(Command.SHOOT);
+        game.processCommand(Command.SHOOT);
+        assertEquals(1, game.projectiles.size());
+    }
 }

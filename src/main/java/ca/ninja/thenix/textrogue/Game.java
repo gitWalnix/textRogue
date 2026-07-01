@@ -1,6 +1,7 @@
 package ca.ninja.thenix.textrogue;
 
 import ca.ninja.thenix.textrogue.entity.Enemy;
+import ca.ninja.thenix.textrogue.entity.Facing;
 import ca.ninja.thenix.textrogue.entity.Player;
 import ca.ninja.thenix.textrogue.entity.Projectile;
 import ca.ninja.thenix.textrogue.gen.DungeonGenerator;
@@ -19,6 +20,8 @@ public class Game {
     static final int MIN_ENEMIES = 3;
     static final int MAX_ENEMIES = 5;
     static final int ENEMY_HP = 4;
+    static final int PROJECTILE_RANGE = 5;
+    static final int SHOOT_COOLDOWN_TICKS = 5;
 
     private final InputHandler input;
     private final Renderer renderer;
@@ -28,6 +31,7 @@ public class Game {
     List<Projectile> projectiles = new ArrayList<>();
     private final Random random = new Random();
     private boolean running;
+    private int shootCooldown = 0;
 
     public Game(InputHandler input, Renderer renderer) {
         this.input = input;
@@ -58,13 +62,30 @@ public class Game {
 
     void processCommand(Command cmd) {
         switch (cmd) {
-            case MOVE_UP    -> tryMove(player.getX(), player.getY() - 1);
-            case MOVE_DOWN  -> tryMove(player.getX(), player.getY() + 1);
-            case MOVE_LEFT  -> tryMove(player.getX() - 1, player.getY());
-            case MOVE_RIGHT -> tryMove(player.getX() + 1, player.getY());
+            case MOVE_UP    -> { player.setFacing(Facing.UP);    tryMove(player.getX(), player.getY() - 1); }
+            case MOVE_DOWN  -> { player.setFacing(Facing.DOWN);  tryMove(player.getX(), player.getY() + 1); }
+            case MOVE_LEFT  -> { player.setFacing(Facing.LEFT);  tryMove(player.getX() - 1, player.getY()); }
+            case MOVE_RIGHT -> { player.setFacing(Facing.RIGHT); tryMove(player.getX() + 1, player.getY()); }
+            case SHOOT      -> shoot();
             case QUIT       -> running = false;
             case UNKNOWN    -> {}
         }
+    }
+
+    private void shoot() {
+        if (shootCooldown > 0) return;
+        shootCooldown = SHOOT_COOLDOWN_TICKS;
+        Facing facing = player.getFacing();
+        int px = player.getX() + facing.dx();
+        int py = player.getY() + facing.dy();
+        projectiles.add(new Projectile(px, py, facing, PROJECTILE_RANGE));
+    }
+
+    private Enemy enemyAt(int x, int y) {
+        for (Enemy e : enemies) {
+            if (e.isAlive() && e.getX() == x && e.getY() == y) return e;
+        }
+        return null;
     }
 
     void gameTick() {}
@@ -96,6 +117,7 @@ public class Game {
     private void tryMove(int nx, int ny) {
         Tile target = dungeon.getTile(nx, ny);
         if (target == Tile.WALL) return;
+        if (enemyAt(nx, ny) != null) return;
         player.moveTo(nx, ny);
         if (target == Tile.STAIRS_DOWN) descend();
     }
