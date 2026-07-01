@@ -1,10 +1,14 @@
 package ca.ninja.thenix.textrogue;
 
+import ca.ninja.thenix.textrogue.entity.Enemy;
+import ca.ninja.thenix.textrogue.entity.Facing;
 import ca.ninja.thenix.textrogue.entity.Player;
+import ca.ninja.thenix.textrogue.entity.Projectile;
 import ca.ninja.thenix.textrogue.input.Command;
 import ca.ninja.thenix.textrogue.input.InputHandler;
 import ca.ninja.thenix.textrogue.render.Renderer;
 import ca.ninja.thenix.textrogue.world.Dungeon;
+import ca.ninja.thenix.textrogue.world.Room;
 import ca.ninja.thenix.textrogue.world.Tile;
 import org.junit.jupiter.api.Test;
 import java.util.Arrays;
@@ -13,7 +17,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class GameTest {
     private static final Renderer NULL_RENDERER = new Renderer() {
-        public void render(Dungeon d, Player p) {}
+        public void render(Dungeon d, Player p, List<Enemy> enemies, List<Projectile> projectiles) {}
+        public void renderDeath(Player p) {}
         public void close() {}
     };
 
@@ -84,5 +89,41 @@ class GameTest {
     void chaseStepMovesTowardNegativeDirection() {
         assertArrayEquals(new int[]{-1, 0}, Game.chaseStep(5, 0, 0, 0));
         assertArrayEquals(new int[]{0, -1}, Game.chaseStep(0, 5, 0, 0));
+    }
+
+    @Test
+    void spawnEnemiesPlacesBetween3And5EnemiesExcludingStartRoom() {
+        Room startRoom = new Room(0, 0, 4, 4);
+        Room otherRoom = new Room(10, 10, 4, 4);
+        Tile[][] tiles = new Tile[Dungeon.HEIGHT][Dungeon.WIDTH];
+        for (Tile[] row : tiles) Arrays.fill(row, Tile.WALL);
+        Dungeon dungeon = new Dungeon(tiles, List.of(startRoom, otherRoom), startRoom.centerX(), startRoom.centerY());
+        Game game = gameWithInjectedState(dungeon, new Player(startRoom.centerX(), startRoom.centerY()));
+        game.spawnEnemies();
+        assertTrue(game.enemies.size() >= 3 && game.enemies.size() <= 5);
+        for (Enemy e : game.enemies) {
+            assertEquals(otherRoom.centerX(), e.getX());
+            assertEquals(otherRoom.centerY(), e.getY());
+        }
+    }
+
+    @Test
+    void descendingClearsOldEnemiesAndSpawnsNewOnes() {
+        Tile[][] tiles = new Tile[Dungeon.HEIGHT][Dungeon.WIDTH];
+        for (Tile[] row : tiles) Arrays.fill(row, Tile.WALL);
+        tiles[12][40] = Tile.FLOOR;
+        tiles[11][40] = Tile.STAIRS_DOWN;
+        Dungeon dungeon = new Dungeon(tiles, List.of(), 40, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        Enemy staleEnemy = new Enemy(99, 99, 4);
+        game.enemies.add(staleEnemy);
+        game.projectiles.add(new Projectile(1, 1, Facing.UP, 5));
+
+        game.processCommand(Command.MOVE_UP);
+
+        assertFalse(game.enemies.contains(staleEnemy));
+        assertTrue(game.projectiles.isEmpty());
+        assertTrue(game.enemies.size() >= 3 && game.enemies.size() <= 5);
     }
 }

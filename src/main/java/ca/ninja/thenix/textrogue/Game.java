@@ -1,20 +1,32 @@
 package ca.ninja.thenix.textrogue;
 
+import ca.ninja.thenix.textrogue.entity.Enemy;
 import ca.ninja.thenix.textrogue.entity.Player;
+import ca.ninja.thenix.textrogue.entity.Projectile;
 import ca.ninja.thenix.textrogue.gen.DungeonGenerator;
 import ca.ninja.thenix.textrogue.input.Command;
 import ca.ninja.thenix.textrogue.input.InputHandler;
 import ca.ninja.thenix.textrogue.render.Renderer;
 import ca.ninja.thenix.textrogue.world.Dungeon;
+import ca.ninja.thenix.textrogue.world.Room;
 import ca.ninja.thenix.textrogue.world.Tile;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 public class Game {
     static final int TICK_MS = 200;
+    static final int MIN_ENEMIES = 3;
+    static final int MAX_ENEMIES = 5;
+    static final int ENEMY_HP = 4;
 
     private final InputHandler input;
     private final Renderer renderer;
     Dungeon dungeon;
     Player player;
+    List<Enemy> enemies = new ArrayList<>();
+    List<Projectile> projectiles = new ArrayList<>();
+    private final Random random = new Random();
     private boolean running;
 
     public Game(InputHandler input, Renderer renderer) {
@@ -25,13 +37,14 @@ public class Game {
     public void start() {
         dungeon = new DungeonGenerator(System.currentTimeMillis()).generate();
         player = new Player(dungeon.getStartX(), dungeon.getStartY());
+        spawnEnemies();
         running = true;
-        renderer.render(dungeon, player);
+        renderer.render(dungeon, player, enemies, projectiles);
         while (running) {
             long tickStart = System.currentTimeMillis();
             processCommand(input.pollCommand());
             gameTick();
-            renderer.render(dungeon, player);
+            renderer.render(dungeon, player, enemies, projectiles);
             long sleep = TICK_MS - (System.currentTimeMillis() - tickStart);
             if (running && sleep > 0) {
                 try {
@@ -56,6 +69,20 @@ public class Game {
 
     void gameTick() {}
 
+    void spawnEnemies() {
+        enemies.clear();
+        projectiles.clear();
+        List<Room> candidates = dungeon.getRooms().stream()
+                .filter(r -> r.centerX() != dungeon.getStartX() || r.centerY() != dungeon.getStartY())
+                .toList();
+        if (candidates.isEmpty()) return;
+        int count = MIN_ENEMIES + random.nextInt(MAX_ENEMIES - MIN_ENEMIES + 1);
+        for (int i = 0; i < count; i++) {
+            Room room = candidates.get(random.nextInt(candidates.size()));
+            enemies.add(new Enemy(room.centerX(), room.centerY(), ENEMY_HP));
+        }
+    }
+
     static int[] chaseStep(int enemyX, int enemyY, int playerX, int playerY) {
         int dx = playerX - enemyX;
         int dy = playerY - enemyY;
@@ -77,6 +104,7 @@ public class Game {
         player.descendFloor();
         dungeon = new DungeonGenerator(System.currentTimeMillis() + player.getFloor()).generate();
         player.moveTo(dungeon.getStartX(), dungeon.getStartY());
+        spawnEnemies();
     }
 
     boolean isRunning() { return running; }

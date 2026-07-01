@@ -1,12 +1,15 @@
 package ca.ninja.thenix.textrogue.render;
 
+import ca.ninja.thenix.textrogue.entity.Enemy;
 import ca.ninja.thenix.textrogue.entity.Player;
+import ca.ninja.thenix.textrogue.entity.Projectile;
 import ca.ninja.thenix.textrogue.world.Dungeon;
 import ca.ninja.thenix.textrogue.world.Tile;
 import com.googlecode.lanterna.TextColor;
 import com.googlecode.lanterna.graphics.TextGraphics;
 import com.googlecode.lanterna.screen.Screen;
 import java.io.IOException;
+import java.util.List;
 
 public class LanternaRenderer implements Renderer {
     private final Screen screen;
@@ -16,23 +19,43 @@ public class LanternaRenderer implements Renderer {
     }
 
     @Override
-    public void render(Dungeon dungeon, Player player) {
+    public void render(Dungeon dungeon, Player player, List<Enemy> enemies, List<Projectile> projectiles) {
         screen.clear();
         TextGraphics g = screen.newTextGraphics();
         for (int y = 0; y < Dungeon.HEIGHT; y++) {
             for (int x = 0; x < Dungeon.WIDTH; x++) {
-                if (x == player.getX() && y == player.getY()) {
-                    g.setForegroundColor(TextColor.ANSI.GREEN_BRIGHT);
-                    g.putString(x, y, "@");
-                } else {
-                    Tile tile = dungeon.getTile(x, y);
-                    g.setForegroundColor(colorFor(tile));
-                    g.putString(x, y, String.valueOf(tile.toChar()));
-                }
+                Tile tile = dungeon.getTile(x, y);
+                g.setForegroundColor(colorFor(tile));
+                g.putString(x, y, String.valueOf(tile.toChar()));
             }
         }
+        for (Enemy enemy : enemies) {
+            if (!enemy.isAlive()) continue;
+            g.setForegroundColor(TextColor.ANSI.RED);
+            g.putString(enemy.getX(), enemy.getY(), "e");
+        }
+        for (Projectile projectile : projectiles) {
+            g.setForegroundColor(TextColor.ANSI.YELLOW);
+            g.putString(projectile.getX(), projectile.getY(), "*");
+        }
+        g.setForegroundColor(TextColor.ANSI.GREEN_BRIGHT);
+        g.putString(player.getX(), player.getY(), String.valueOf(player.getFacing().toChar()));
         g.setForegroundColor(TextColor.ANSI.WHITE);
-        g.putString(0, Dungeon.HEIGHT, "Floor: " + player.getFloor());
+        g.putString(0, Dungeon.HEIGHT, "Floor: " + player.getFloor() + "   HP: " + player.getHp() + "/" + player.getMaxHp());
+        try {
+            screen.refresh();
+        } catch (IOException ignored) {}
+    }
+
+    @Override
+    public void renderDeath(Player player) {
+        screen.clear();
+        TextGraphics g = screen.newTextGraphics();
+        g.setForegroundColor(TextColor.ANSI.RED);
+        String message = "You died";
+        int x = Math.max(0, (Dungeon.WIDTH - message.length()) / 2);
+        int y = Dungeon.HEIGHT / 2;
+        g.putString(x, y, message);
         try {
             screen.refresh();
         } catch (IOException ignored) {}
