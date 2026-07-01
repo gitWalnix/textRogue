@@ -19,7 +19,7 @@ public class Game {
     static final int TICK_MS = 200;
     static final int MIN_ENEMIES = 3;
     static final int MAX_ENEMIES = 5;
-    static final int ENEMY_HP = 4;
+    static final int ENEMY_HP = 2;
     static final int PROJECTILE_RANGE = 5;
     static final int SHOOT_COOLDOWN_TICKS = 5;
     static final int CHASE_RADIUS = 6;
