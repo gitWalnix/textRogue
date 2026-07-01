@@ -56,6 +56,16 @@ public class Game {
 
     void gameTick() {}
 
+    static int[] chaseStep(int enemyX, int enemyY, int playerX, int playerY) {
+        int dx = playerX - enemyX;
+        int dy = playerY - enemyY;
+        if (Math.abs(dx) >= Math.abs(dy)) {
+            return new int[]{Integer.signum(dx), 0};
+        } else {
+            return new int[]{0, Integer.signum(dy)};
+        }
+    }
+
     private void tryMove(int nx, int ny) {
         Tile target = dungeon.getTile(nx, ny);
         if (target == Tile.WALL) return;

@@ -73,4 +73,16 @@ class GameTest {
         game.processCommand(Command.MOVE_UP);
         assertEquals(2, game.player.getFloor());
     }
+
+    @Test
+    void chaseStepPrioritizesLargerAxisDistance() {
+        assertArrayEquals(new int[]{1, 0}, Game.chaseStep(0, 0, 5, 1));
+        assertArrayEquals(new int[]{0, 1}, Game.chaseStep(0, 0, 1, 5));
+    }
+
+    @Test
+    void chaseStepMovesTowardNegativeDirection() {
+        assertArrayEquals(new int[]{-1, 0}, Game.chaseStep(5, 0, 0, 0));
+        assertArrayEquals(new int[]{0, -1}, Game.chaseStep(0, 5, 0, 0));
+    }
 }
