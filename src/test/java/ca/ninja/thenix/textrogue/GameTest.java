@@ -7,14 +7,15 @@ import ca.ninja.thenix.textrogue.render.Renderer;
 import ca.ninja.thenix.textrogue.world.Dungeon;
 import ca.ninja.thenix.textrogue.world.Tile;
 import org.junit.jupiter.api.Test;
-import java.io.OutputStream;
-import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 class GameTest {
-    private static final PrintStream NULL_OUT = new PrintStream(OutputStream.nullOutputStream());
+    private static final Renderer NULL_RENDERER = new Renderer() {
+        public void render(Dungeon d, Player p) {}
+        public void close() {}
+    };
 
     private Dungeon dungeonWithFloorAt(int px, int py, int... extraFloors) {
         Tile[][] tiles = new Tile[Dungeon.HEIGHT][Dungeon.WIDTH];
@@ -27,7 +28,7 @@ class GameTest {
     }
 
     private Game gameWithInjectedState(Dungeon dungeon, Player player) {
-        Game game = new Game(() -> Command.UNKNOWN, new Renderer(NULL_OUT));
+        Game game = new Game(() -> Command.UNKNOWN, NULL_RENDERER);
         game.dungeon = dungeon;
         game.player = player;
         return game;
@@ -35,7 +36,7 @@ class GameTest {
 
     @Test
     void quitCommandStopsLoop() {
-        Game game = new Game(() -> Command.QUIT, new Renderer(NULL_OUT));
+        Game game = new Game(() -> Command.QUIT, NULL_RENDERER);
         game.start();
         assertFalse(game.isRunning());
     }
@@ -45,9 +46,7 @@ class GameTest {
         Dungeon dungeon = dungeonWithFloorAt(40, 12);
         Player player = new Player(40, 12);
         Game game = gameWithInjectedState(dungeon, player);
-
         game.processCommand(Command.MOVE_UP);
-
         assertEquals(40, game.player.getX());
         assertEquals(12, game.player.getY());
     }
@@ -57,9 +56,7 @@ class GameTest {
         Dungeon dungeon = dungeonWithFloorAt(40, 12, 40, 11);
         Player player = new Player(40, 12);
         Game game = gameWithInjectedState(dungeon, player);
-
         game.processCommand(Command.MOVE_UP);
-
         assertEquals(40, game.player.getX());
         assertEquals(11, game.player.getY());
     }
@@ -73,9 +70,7 @@ class GameTest {
         Dungeon dungeon = new Dungeon(tiles, List.of(), 40, 12);
         Player player = new Player(40, 12);
         Game game = gameWithInjectedState(dungeon, player);
-
         game.processCommand(Command.MOVE_UP);
-
         assertEquals(2, game.player.getFloor());
     }
 }
