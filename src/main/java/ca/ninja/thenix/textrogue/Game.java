@@ -9,6 +9,8 @@ import ca.ninja.thenix.textrogue.world.Dungeon;
 import ca.ninja.thenix.textrogue.world.Tile;
 
 public class Game {
+    static final int TICK_MS = 200;
+
     private final InputHandler input;
     private final Renderer renderer;
     Dungeon dungeon;
@@ -24,12 +26,20 @@ public class Game {
         dungeon = new DungeonGenerator(System.currentTimeMillis()).generate();
         player = new Player(dungeon.getStartX(), dungeon.getStartY());
         running = true;
-
         renderer.render(dungeon, player);
         while (running) {
-            Command cmd = input.pollCommand();
-            processCommand(cmd);
+            long tickStart = System.currentTimeMillis();
+            processCommand(input.pollCommand());
+            gameTick();
             renderer.render(dungeon, player);
+            long sleep = TICK_MS - (System.currentTimeMillis() - tickStart);
+            if (running && sleep > 0) {
+                try {
+                    Thread.sleep(sleep);
+                } catch (InterruptedException e) {
+                    running = false;
+                }
+            }
         }
     }
 
@@ -43,6 +53,8 @@ public class Game {
             case UNKNOWN    -> {}
         }
     }
+
+    void gameTick() {}
 
     private void tryMove(int nx, int ny) {
         Tile target = dungeon.getTile(nx, ny);
