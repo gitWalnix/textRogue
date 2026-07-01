@@ -27,7 +27,7 @@ public class Game {
 
         renderer.render(dungeon, player);
         while (running) {
-            Command cmd = input.readCommand();
+            Command cmd = input.pollCommand();
             processCommand(cmd);
             renderer.render(dungeon, player);
         }

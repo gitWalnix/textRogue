@@ -7,7 +7,6 @@ import ca.ninja.thenix.textrogue.render.Renderer;
 import ca.ninja.thenix.textrogue.world.Dungeon;
 import ca.ninja.thenix.textrogue.world.Tile;
 import org.junit.jupiter.api.Test;
-import java.io.ByteArrayInputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.Arrays;
@@ -28,8 +27,7 @@ class GameTest {
     }
 
     private Game gameWithInjectedState(Dungeon dungeon, Player player) {
-        InputHandler input = new InputHandler(new ByteArrayInputStream(new byte[0]));
-        Game game = new Game(input, new Renderer(NULL_OUT));
+        Game game = new Game(() -> Command.UNKNOWN, new Renderer(NULL_OUT));
         game.dungeon = dungeon;
         game.player = player;
         return game;
@@ -37,8 +35,7 @@ class GameTest {
 
     @Test
     void quitCommandStopsLoop() {
-        InputHandler input = new InputHandler(new ByteArrayInputStream("q\n".getBytes()));
-        Game game = new Game(input, new Renderer(NULL_OUT));
+        Game game = new Game(() -> Command.QUIT, new Renderer(NULL_OUT));
         game.start();
         assertFalse(game.isRunning());
     }
