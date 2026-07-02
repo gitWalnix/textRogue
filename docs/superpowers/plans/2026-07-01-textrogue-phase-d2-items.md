@@ -4,7 +4,7 @@
 
 **Goal:** Add healing potions — dropped probabilistically by enemies on death, picked up automatically on contact, and consumed on command — as the first item type in TextRogue, built as the smallest slice that proves out drop → ground representation → pickup → inventory → use.
 
-**Architecture:** Potions are represented as a new `Tile.POTION` enum constant rather than a separate moving-entity list, so they ride the existing fog-of-war terrain rendering (visible/explored-dimmed/unexplored-blank) from Phase D1 for free, with zero new rendering branches. `Player` gains a stackable `potionCount` plus `heal`/`addPotion`/`drinkPotion` methods. `Game` rolls a drop chance in `advanceProjectiles()` when a hit kills an enemy, handles pickup in `tryMove()`, and wires a new `DRINK_POTION` command in `processCommand()`. The existing `'q'` → `QUIT` key binding is untouched — there's no actual conflict with the new `'e'` drink key.
+**Architecture:** Potions are represented as a new `Tile.POTION` enum constant rather than a separate moving-entity list, so they ride the existing fog-of-war terrain rendering (visible/explored-dimmed/unexplored-blank) from Phase D1 for free, with zero new rendering branches. `Player` gains a stackable `potionCount` plus `heal`/`addPotion`/`drinkPotion` methods. `Game` rolls a drop chance in `advanceProjectiles()` when a hit kills an enemy, handles pickup in `tryMove()`, and wires a new `DRINK_POTION` command in `processCommand()`. Also bundled: dropping `q` as a quit key (leaving `Escape` as the sole quit binding) to avoid ambiguity with the new single-letter item command.
 
 **Tech Stack:** Java 21, JUnit 5, Lanterna 3.1.1 (`DefaultVirtualTerminal` for headless render/input tests).
 
@@ -19,7 +19,7 @@
 - Drop guard: only drop onto a tile that is currently `Tile.FLOOR` — never overwrite `Tile.STAIRS_DOWN` (an enemy that dies standing on stairs simply doesn't drop anything, no special-case restoration logic).
 - Pickup is automatic on walking onto a `Tile.POTION` tile (mirrors the existing `STAIRS_DOWN`-triggers-`descend()` pattern in `tryMove()`), and the tile reverts to `Tile.FLOOR` immediately.
 - Drink command is bound to `'e'`, added to `Command` as `DRINK_POTION`. No user-facing message on drinking with an empty inventory — the status line's `Potions: 0` is the existing signal.
-- `'q'` → `Command.QUIT` is unchanged — both `'q'` and `Escape`/`EOF` continue to quit, exactly as before this phase.
+- Input cleanup: remove the `'q'` → `Command.QUIT` mapping in `LanternaInputHandler`. `Escape` (and `EOF`) remain the only way to quit.
 - Potions do **not** get their own entity-visibility gating — as a `Tile`, they already only render according to the three-tier fog-of-war rules every other tile uses (Phase D1, untouched).
 
 ---
@@ -278,7 +278,7 @@ git commit -m "feat: add potion inventory and healing to Player"
 
 ---
 
-### Task 3: DRINK_POTION command bound to 'e'
+### Task 3: DRINK_POTION command; drop `q` as a quit key
 
 **Files:**
 - Modify: `src/main/java/ca/ninja/thenix/textrogue/input/Command.java`
@@ -286,30 +286,42 @@ git commit -m "feat: add potion inventory and healing to Player"
 - Modify: `src/test/java/ca/ninja/thenix/textrogue/input/LanternaInputHandlerTest.java`
 
 **Interfaces:**
-- Produces: `Command.DRINK_POTION` enum constant; `'e'` key maps to it. `'q'` continues to map to `Command.QUIT`, unchanged; `Escape`/`EOF` also continue to map to `Command.QUIT`, unchanged. Used by Task 4 (`Game.processCommand`).
+- Produces: `Command.DRINK_POTION` enum constant; `'e'` key maps to it. `'q'` now maps to `Command.UNKNOWN` (no longer `QUIT`); `Escape`/`EOF` remain the only inputs mapping to `Command.QUIT`. Used by Task 4 (`Game.processCommand`).
 
 - [ ] **Step 1: Write the failing tests**
 
-The existing `qKeyReturnsQuit` test is untouched — `'q'` still quits. Append these new tests inside `class LanternaInputHandlerTest { ... }`:
+In `LanternaInputHandlerTest.java`, replace the existing `qKeyReturnsQuit` test:
 
 ```java
     @Test
-    void eKeyReturnsDrinkPotion() throws IOException {
-        assertEquals(Command.DRINK_POTION, handlerWithKey(new KeyStroke('e', false, false)).pollCommand());
+    void qKeyReturnsQuit() throws IOException {
+        assertEquals(Command.QUIT, handlerWithKey(new KeyStroke('q', false, false)).pollCommand());
+    }
+```
+
+with:
+
+```java
+    @Test
+    void qKeyReturnsUnknown() throws IOException {
+        assertEquals(Command.UNKNOWN, handlerWithKey(new KeyStroke('q', false, false)).pollCommand());
     }
 
     @Test
     void escapeKeyReturnsQuit() throws IOException {
         assertEquals(Command.QUIT, handlerWithKey(new KeyStroke(KeyType.Escape)).pollCommand());
     }
-```
 
-(`escapeKeyReturnsQuit` fills a pre-existing gap — the `EOF, Escape -> Command.QUIT` branch was never directly tested before this, only `'q'` was.)
+    @Test
+    void eKeyReturnsDrinkPotion() throws IOException {
+        assertEquals(Command.DRINK_POTION, handlerWithKey(new KeyStroke('e', false, false)).pollCommand());
+    }
+```
 
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `mvn -q test -Dtest=LanternaInputHandlerTest`
-Expected: FAIL — both new tests fail to compile (`Command.DRINK_POTION` does not exist yet); `qKeyReturnsQuit` and every other existing test still pass unaffected
+Expected: FAIL — `qKeyReturnsUnknown` fails (still returns `QUIT`, since production code isn't updated yet), and `eKeyReturnsDrinkPotion` fails to compile (`Command.DRINK_POTION` does not exist)
 
 - [ ] **Step 3: Add DRINK_POTION to Command**
 
@@ -364,7 +376,6 @@ with:
                     case 's' -> Command.MOVE_DOWN;
                     case 'a' -> Command.MOVE_LEFT;
                     case 'd' -> Command.MOVE_RIGHT;
-                    case 'q' -> Command.QUIT;
                     case 'e' -> Command.DRINK_POTION;
                     case ' ' -> Command.SHOOT;
                     default  -> Command.UNKNOWN;
@@ -380,8 +391,6 @@ with:
     }
 ```
 
-(`'q' -> Command.QUIT` is carried over unchanged from the existing code — only the `'e'` case is new.)
-
 - [ ] **Step 5: Run tests to verify they pass**
 
 Run: `mvn -q test -Dtest=LanternaInputHandlerTest`
@@ -391,7 +400,7 @@ Expected: PASS (11 tests)
 
 ```bash
 git add src/main/java/ca/ninja/thenix/textrogue/input/Command.java src/main/java/ca/ninja/thenix/textrogue/input/LanternaInputHandler.java src/test/java/ca/ninja/thenix/textrogue/input/LanternaInputHandlerTest.java
-git commit -m "feat: add DRINK_POTION command bound to 'e'"
+git commit -m "feat: add DRINK_POTION command bound to 'e'; drop 'q' as a quit key"
 ```
 
 ---
@@ -731,7 +740,7 @@ Confirm in the opened Swing window:
 - Walking onto a `!` tile picks it up automatically — the status line's `Potions: N` counter increases, and the tile becomes empty floor
 - Pressing `e` with at least one potion heals the player (HP increases by 10, capped at 20/20) and decrements the potion counter
 - Pressing `e` with zero potions does nothing (no crash, no change)
-- Pressing `q` still quits the game, same as `Escape` (unchanged from before this phase)
+- Pressing `q` no longer quits the game; pressing `Escape` does
 - A dropped potion on a tile you've walked away from still shows dimmed (remembered terrain), consistent with Phase D1's fog-of-war rules — it doesn't wink out just because it's no longer in the currently-visible radius
 
 - [ ] **Step 4: Commit any fixups discovered during manual playtest**
