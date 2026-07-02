@@ -80,4 +80,9 @@ class LanternaInputHandlerTest {
     void spaceKeyReturnsShoot() throws IOException {
         assertEquals(Command.SHOOT, handlerWithKey(new KeyStroke(' ', false, false)).pollCommand());
     }
+
+    @Test
+    void rKeyReturnsRestart() throws IOException {
+        assertEquals(Command.RESTART, handlerWithKey(new KeyStroke('r', false, false)).pollCommand());
+    }
 }

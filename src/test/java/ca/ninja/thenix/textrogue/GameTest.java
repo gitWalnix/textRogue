@@ -358,4 +358,15 @@ class GameTest {
         assertTrue(droppedAtLeastOnce, "expected at least one potion drop across 200 trials at 33% chance");
         assertTrue(noDropAtLeastOnce, "expected at least one non-drop across 200 trials at 33% chance");
     }
+
+    @Test
+    void restartCommandDuringActivePlayDoesNothing() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        game.processCommand(Command.RESTART);
+        assertEquals(40, game.player.getX());
+        assertEquals(12, game.player.getY());
+        assertFalse(game.player.isDead());
+    }
 }

@@ -92,6 +92,7 @@ public class Game {
             case MOVE_RIGHT   -> { player.setFacing(Facing.RIGHT); tryMove(player.getX() + 1, player.getY()); }
             case SHOOT        -> shoot();
             case DRINK_POTION -> player.drinkPotion(POTION_HEAL_AMOUNT);
+            case RESTART      -> {} // only meaningful on the death screen; see Game.awaitDeathChoice (Task 3)
             case QUIT         -> running = false;
             case UNKNOWN      -> {}
         }
