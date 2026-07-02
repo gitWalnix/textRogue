@@ -29,7 +29,6 @@ public class Game {
     static final int CHASE_RADIUS = 6;
     static final int ENEMY_CONTACT_DAMAGE = 2;
     static final int PROJECTILE_DAMAGE = 2;
-    static final int DEATH_SCREEN_DISPLAY_MS = 3000;
     static final int VISIBILITY_RADIUS = 8;
     static final double POTION_DROP_CHANCE = 0.33;
     static final int POTION_HEAL_AMOUNT = 10;
@@ -51,11 +50,7 @@ public class Game {
     }
 
     public void start() {
-        if (dungeon == null) {
-            dungeon = new DungeonGenerator(System.currentTimeMillis()).generate();
-            player = new Player(dungeon.getStartX(), dungeon.getStartY());
-            spawnEnemies();
-        }
+        if (dungeon == null) newRun();
         running = true;
         renderer.render(dungeon, player, enemies, projectiles, updateVisibility());
         while (running) {
@@ -65,12 +60,13 @@ public class Game {
             renderer.render(dungeon, player, enemies, projectiles, updateVisibility());
             if (player.isDead()) {
                 renderer.renderDeath(player);
-                running = false;
-                try {
-                    Thread.sleep(DEATH_SCREEN_DISPLAY_MS);
-                } catch (InterruptedException e) {
-                    // proceed to exit regardless
+                Command choice = awaitDeathChoice();
+                if (choice == Command.RESTART) {
+                    newRun();
+                    renderer.render(dungeon, player, enemies, projectiles, updateVisibility());
+                    continue;
                 }
+                running = false;
                 break;
             }
             long sleep = TICK_MS - (System.currentTimeMillis() - tickStart);
@@ -82,6 +78,25 @@ public class Game {
                 }
             }
         }
+    }
+
+    private Command awaitDeathChoice() {
+        while (true) {
+            Command cmd = input.pollCommand();
+            if (cmd == Command.RESTART || cmd == Command.QUIT) return cmd;
+            try {
+                Thread.sleep(TICK_MS);
+            } catch (InterruptedException e) {
+                return Command.QUIT;
+            }
+        }
+    }
+
+    private void newRun() {
+        dungeon = new DungeonGenerator(System.currentTimeMillis()).generate();
+        player = new Player(dungeon.getStartX(), dungeon.getStartY());
+        spawnEnemies();
+        shootCooldown = 0;
     }
 
     void processCommand(Command cmd) {
@@ -132,7 +147,10 @@ public class Game {
             Enemy hit = enemyAt(p.getX(), p.getY());
             if (hit != null) {
                 hit.takeDamage(PROJECTILE_DAMAGE);
-                if (!hit.isAlive()) maybeDropPotion(hit.getX(), hit.getY());
+                if (!hit.isAlive()) {
+                    player.recordKill();
+                    maybeDropPotion(hit.getX(), hit.getY());
+                }
                 it.remove();
                 continue;
             }

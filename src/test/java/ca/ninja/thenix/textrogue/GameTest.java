@@ -274,16 +274,88 @@ class GameTest {
             public void renderDeath(Player p) { deathRendered[0] = true; }
             public void close() {}
         };
-        Game game = new Game(() -> Command.UNKNOWN, capturingRenderer);
+        int[] pollCount = {0};
+        InputHandler input = () -> {
+            pollCount[0]++;
+            return pollCount[0] < 2 ? Command.UNKNOWN : Command.QUIT;
+        };
+        Game game = new Game(input, capturingRenderer);
         game.dungeon = dungeon;
         game.player = player;
-        long start = System.currentTimeMillis();
         game.start();
-        long elapsed = System.currentTimeMillis() - start;
         assertTrue(deathRendered[0]);
         assertFalse(game.isRunning());
-        assertTrue(elapsed >= Game.DEATH_SCREEN_DISPLAY_MS,
-                "death screen should stay visible for at least " + Game.DEATH_SCREEN_DISPLAY_MS + "ms, was " + elapsed);
+    }
+
+    @Test
+    void deathScreenWaitsForRestartOrQuitIgnoringOtherCommands() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12);
+        Player player = new Player(40, 12);
+        player.takeDamage(player.getHp());
+        int[] pollCount = {0};
+        InputHandler input = () -> {
+            pollCount[0]++;
+            // first poll (pre-death processCommand) and two more inside the
+            // death-screen wait loop all return UNKNOWN/gameplay commands
+            // before QUIT finally arrives.
+            return switch (pollCount[0]) {
+                case 1 -> Command.UNKNOWN;
+                case 2 -> Command.MOVE_UP;
+                case 3 -> Command.SHOOT;
+                default -> Command.QUIT;
+            };
+        };
+        Game game = new Game(input, NULL_RENDERER);
+        game.dungeon = dungeon;
+        game.player = player;
+        game.start();
+        assertFalse(game.isRunning());
+        assertTrue(pollCount[0] >= 4);
+    }
+
+    @Test
+    void killingEnemyIncrementsPlayerKillCount() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12, 41, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        Enemy enemy = new Enemy(41, 12, 2);
+        game.enemies.add(enemy);
+        game.projectiles.add(new Projectile(41, 12, Facing.RIGHT, 5));
+        game.gameTick();
+        assertEquals(1, game.player.getKillCount());
+    }
+
+    @Test
+    void restartAfterDeathStartsFreshRunAndResetsStats() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12);
+        Player player = new Player(40, 12);
+        player.descendFloor();
+        player.descendFloor();
+        player.recordKill();
+        player.recordKill();
+        player.addPotion();
+        player.drinkPotion(5);
+        player.takeDamage(player.getHp());
+        Dungeon dungeonBefore = dungeon;
+        int[] pollCount = {0};
+        InputHandler input = () -> {
+            pollCount[0]++;
+            return switch (pollCount[0]) {
+                case 1 -> Command.UNKNOWN; // pre-death processCommand poll
+                case 2 -> Command.RESTART; // first poll inside the death-screen wait loop
+                default -> Command.QUIT;   // stops the fresh run's loop immediately
+            };
+        };
+        Game game = new Game(input, NULL_RENDERER);
+        game.dungeon = dungeon;
+        game.player = player;
+        game.start();
+        assertFalse(game.isRunning());
+        assertNotSame(dungeonBefore, game.dungeon);
+        assertFalse(game.player.isDead());
+        assertEquals(1, game.player.getFloor());
+        assertEquals(0, game.player.getKillCount());
+        assertEquals(0, game.player.getPotionsUsed());
     }
 
     @Test
