@@ -73,4 +73,47 @@ class PlayerTest {
         player.takeDamage(20);
         assertTrue(player.isDead());
     }
+
+    @Test
+    void startsWithNoPotions() {
+        Player player = new Player(0, 0);
+        assertEquals(0, player.getPotionCount());
+    }
+
+    @Test
+    void addPotionIncrementsCount() {
+        Player player = new Player(0, 0);
+        player.addPotion();
+        player.addPotion();
+        assertEquals(2, player.getPotionCount());
+    }
+
+    @Test
+    void healIncreasesHpButCapsAtMax() {
+        Player player = new Player(0, 0);
+        player.takeDamage(15);
+        player.heal(5);
+        assertEquals(10, player.getHp());
+        player.heal(999);
+        assertEquals(20, player.getHp());
+    }
+
+    @Test
+    void drinkPotionConsumesPotionAndHeals() {
+        Player player = new Player(0, 0);
+        player.takeDamage(15);
+        player.addPotion();
+        boolean drank = player.drinkPotion(10);
+        assertTrue(drank);
+        assertEquals(15, player.getHp());
+        assertEquals(0, player.getPotionCount());
+    }
+
+    @Test
+    void drinkPotionWithNoneDoesNothing() {
+        Player player = new Player(0, 0);
+        boolean drank = player.drinkPotion(10);
+        assertFalse(drank);
+        assertEquals(20, player.getHp());
+    }
 }
