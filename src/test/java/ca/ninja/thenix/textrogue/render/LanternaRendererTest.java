@@ -156,13 +156,17 @@ class LanternaRendererTest {
 
     @Test
     void enemyOutsideVisibleTilesDoesNotRender() throws IOException {
-        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(5, 5), List.of(new Enemy(3, 3, 4)), List.of(), Set.of());
-        assertEquals(' ', t.getCharacter(new TerminalPosition(3, 3)).getCharacter());
+        Dungeon dungeon = withTileAt(3, 3, Tile.FLOOR);
+        dungeon.markExplored(3, 3);
+        DefaultVirtualTerminal t = renderTo(dungeon, new Player(5, 5), List.of(new Enemy(3, 3, 4)), List.of(), Set.of());
+        assertEquals('.', t.getCharacter(new TerminalPosition(3, 3)).getCharacter());
     }
 
     @Test
     void projectileOutsideVisibleTilesDoesNotRender() throws IOException {
-        DefaultVirtualTerminal t = renderTo(allWalls(), new Player(5, 5), List.of(), List.of(new Projectile(2, 2, Facing.UP, 5)), Set.of());
-        assertEquals(' ', t.getCharacter(new TerminalPosition(2, 2)).getCharacter());
+        Dungeon dungeon = withTileAt(2, 2, Tile.FLOOR);
+        dungeon.markExplored(2, 2);
+        DefaultVirtualTerminal t = renderTo(dungeon, new Player(5, 5), List.of(), List.of(new Projectile(2, 2, Facing.UP, 5)), Set.of());
+        assertEquals('.', t.getCharacter(new TerminalPosition(2, 2)).getCharacter());
     }
 }
