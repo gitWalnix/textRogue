@@ -169,4 +169,10 @@ class LanternaRendererTest {
         DefaultVirtualTerminal t = renderTo(dungeon, new Player(5, 5), List.of(), List.of(new Projectile(2, 2, Facing.UP, 5)), Set.of());
         assertEquals('.', t.getCharacter(new TerminalPosition(2, 2)).getCharacter());
     }
+
+    @Test
+    void potionTileRendersAsBang() throws IOException {
+        DefaultVirtualTerminal t = renderTo(withTileAt(2, 2, Tile.POTION), new Player(5, 5), List.of(), List.of(), allVisible());
+        assertEquals('!', t.getCharacter(new TerminalPosition(2, 2)).getCharacter());
+    }
 }

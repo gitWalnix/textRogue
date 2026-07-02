@@ -79,6 +79,7 @@ public class LanternaRenderer implements Renderer {
             case WALL        -> TextColor.ANSI.BLACK_BRIGHT;
             case FLOOR       -> TextColor.ANSI.WHITE;
             case STAIRS_DOWN -> TextColor.ANSI.YELLOW;
+            case POTION      -> TextColor.ANSI.MAGENTA;
         };
     }
 

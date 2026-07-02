@@ -18,4 +18,9 @@ class TileTest {
     void stairsRendersAsGreaterThan() {
         assertEquals('>', Tile.STAIRS_DOWN.toChar());
     }
+
+    @Test
+    void potionRendersAsExclamation() {
+        assertEquals('!', Tile.POTION.toChar());
+    }
 }
