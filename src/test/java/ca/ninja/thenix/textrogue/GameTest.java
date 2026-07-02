@@ -297,4 +297,65 @@ class GameTest {
         assertTrue(dungeon.isExplored(40 + Game.VISIBILITY_RADIUS, 12));
         assertFalse(dungeon.isExplored(40 + Game.VISIBILITY_RADIUS + 1, 12));
     }
+
+    @Test
+    void walkingOntoPotionAddsToInventoryAndClearsTile() {
+        Tile[][] tiles = new Tile[Dungeon.HEIGHT][Dungeon.WIDTH];
+        for (Tile[] row : tiles) Arrays.fill(row, Tile.WALL);
+        tiles[12][40] = Tile.FLOOR;
+        tiles[11][40] = Tile.POTION;
+        Dungeon dungeon = new Dungeon(tiles, List.of(), 40, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        game.processCommand(Command.MOVE_UP);
+        assertEquals(1, game.player.getPotionCount());
+        assertEquals(Tile.FLOOR, dungeon.getTile(40, 11));
+    }
+
+    @Test
+    void drinkPotionCommandHealsPlayerAndConsumesPotion() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12);
+        Player player = new Player(40, 12);
+        player.takeDamage(15);
+        player.addPotion();
+        Game game = gameWithInjectedState(dungeon, player);
+        game.processCommand(Command.DRINK_POTION);
+        assertEquals(15, game.player.getHp());
+        assertEquals(0, game.player.getPotionCount());
+    }
+
+    @Test
+    void killingEnemyOnStairsNeverOverwritesStairsTile() {
+        Tile[][] tiles = new Tile[Dungeon.HEIGHT][Dungeon.WIDTH];
+        for (Tile[] row : tiles) Arrays.fill(row, Tile.WALL);
+        tiles[12][40] = Tile.FLOOR;
+        tiles[12][41] = Tile.STAIRS_DOWN;
+        Dungeon dungeon = new Dungeon(tiles, List.of(), 40, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        Enemy enemy = new Enemy(41, 12, 2);
+        game.enemies.add(enemy);
+        game.projectiles.add(new Projectile(41, 12, Facing.RIGHT, 5));
+        game.gameTick();
+        assertEquals(Tile.STAIRS_DOWN, dungeon.getTile(41, 12));
+    }
+
+    @Test
+    void killingEnemyProbablyDropsPotionSometimesButNotAlways() {
+        boolean droppedAtLeastOnce = false;
+        boolean noDropAtLeastOnce = false;
+        for (int i = 0; i < 200 && !(droppedAtLeastOnce && noDropAtLeastOnce); i++) {
+            Dungeon dungeon = dungeonWithFloorAt(40, 12, 41, 12);
+            Player player = new Player(40, 12);
+            Game game = gameWithInjectedState(dungeon, player);
+            Enemy enemy = new Enemy(41, 12, 2);
+            game.enemies.add(enemy);
+            game.projectiles.add(new Projectile(41, 12, Facing.RIGHT, 5));
+            game.gameTick();
+            if (dungeon.getTile(41, 12) == Tile.POTION) droppedAtLeastOnce = true;
+            else noDropAtLeastOnce = true;
+        }
+        assertTrue(droppedAtLeastOnce, "expected at least one potion drop across 200 trials at 33% chance");
+        assertTrue(noDropAtLeastOnce, "expected at least one non-drop across 200 trials at 33% chance");
+    }
 }

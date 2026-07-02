@@ -31,6 +31,8 @@ public class Game {
     static final int PROJECTILE_DAMAGE = 2;
     static final int DEATH_SCREEN_DISPLAY_MS = 3000;
     static final int VISIBILITY_RADIUS = 8;
+    static final double POTION_DROP_CHANCE = 0.33;
+    static final int POTION_HEAL_AMOUNT = 10;
 
     private final InputHandler input;
     private final Renderer renderer;
@@ -84,13 +86,14 @@ public class Game {
 
     void processCommand(Command cmd) {
         switch (cmd) {
-            case MOVE_UP    -> { player.setFacing(Facing.UP);    tryMove(player.getX(), player.getY() - 1); }
-            case MOVE_DOWN  -> { player.setFacing(Facing.DOWN);  tryMove(player.getX(), player.getY() + 1); }
-            case MOVE_LEFT  -> { player.setFacing(Facing.LEFT);  tryMove(player.getX() - 1, player.getY()); }
-            case MOVE_RIGHT -> { player.setFacing(Facing.RIGHT); tryMove(player.getX() + 1, player.getY()); }
-            case SHOOT      -> shoot();
-            case QUIT       -> running = false;
-            case UNKNOWN    -> {}
+            case MOVE_UP      -> { player.setFacing(Facing.UP);    tryMove(player.getX(), player.getY() - 1); }
+            case MOVE_DOWN    -> { player.setFacing(Facing.DOWN);  tryMove(player.getX(), player.getY() + 1); }
+            case MOVE_LEFT    -> { player.setFacing(Facing.LEFT);  tryMove(player.getX() - 1, player.getY()); }
+            case MOVE_RIGHT   -> { player.setFacing(Facing.RIGHT); tryMove(player.getX() + 1, player.getY()); }
+            case SHOOT        -> shoot();
+            case DRINK_POTION -> player.drinkPotion(POTION_HEAL_AMOUNT);
+            case QUIT         -> running = false;
+            case UNKNOWN      -> {}
         }
     }
 
@@ -128,6 +131,7 @@ public class Game {
             Enemy hit = enemyAt(p.getX(), p.getY());
             if (hit != null) {
                 hit.takeDamage(PROJECTILE_DAMAGE);
+                if (!hit.isAlive()) maybeDropPotion(hit.getX(), hit.getY());
                 it.remove();
                 continue;
             }
@@ -136,6 +140,13 @@ public class Game {
                 continue;
             }
             p.advance();
+        }
+    }
+
+    private void maybeDropPotion(int x, int y) {
+        if (dungeon.getTile(x, y) != Tile.FLOOR) return;
+        if (random.nextDouble() < POTION_DROP_CHANCE) {
+            dungeon.setTile(x, y, Tile.POTION);
         }
     }
 
@@ -209,6 +220,10 @@ public class Game {
         if (enemyAt(nx, ny) != null) return;
         player.moveTo(nx, ny);
         if (target == Tile.STAIRS_DOWN) descend();
+        if (target == Tile.POTION) {
+            player.addPotion();
+            dungeon.setTile(nx, ny, Tile.FLOOR);
+        }
     }
 
     private void descend() {
