@@ -40,7 +40,7 @@ public class LanternaInputHandler implements InputHandler {
                     case 's' -> Command.MOVE_DOWN;
                     case 'a' -> Command.MOVE_LEFT;
                     case 'd' -> Command.MOVE_RIGHT;
-                    case 'q' -> Command.QUIT;
+                    case 'e' -> Command.DRINK_POTION;
                     case ' ' -> Command.SHOOT;
                     default  -> Command.UNKNOWN;
                 };

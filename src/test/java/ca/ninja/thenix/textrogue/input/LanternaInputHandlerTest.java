@@ -47,8 +47,18 @@ class LanternaInputHandlerTest {
     }
 
     @Test
-    void qKeyReturnsQuit() throws IOException {
-        assertEquals(Command.QUIT, handlerWithKey(new KeyStroke('q', false, false)).pollCommand());
+    void qKeyReturnsUnknown() throws IOException {
+        assertEquals(Command.UNKNOWN, handlerWithKey(new KeyStroke('q', false, false)).pollCommand());
+    }
+
+    @Test
+    void escapeKeyReturnsQuit() throws IOException {
+        assertEquals(Command.QUIT, handlerWithKey(new KeyStroke(KeyType.Escape)).pollCommand());
+    }
+
+    @Test
+    void eKeyReturnsDrinkPotion() throws IOException {
+        assertEquals(Command.DRINK_POTION, handlerWithKey(new KeyStroke('e', false, false)).pollCommand());
     }
 
     @Test
