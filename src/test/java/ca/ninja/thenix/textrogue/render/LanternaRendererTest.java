@@ -186,4 +186,32 @@ class LanternaRendererTest {
         for (int x = 0; x < 45; x++) sb.append(t.getCharacter(new TerminalPosition(x, Dungeon.HEIGHT)).getCharacter());
         assertTrue(sb.toString().contains("Potions: 2"));
     }
+
+    private String rowText(DefaultVirtualTerminal terminal, int row) {
+        StringBuilder sb = new StringBuilder();
+        for (int x = 0; x < Dungeon.WIDTH; x++) sb.append(terminal.getCharacter(new TerminalPosition(x, row)).getCharacter());
+        return sb.toString();
+    }
+
+    @Test
+    void renderDeathShowsStatsAndRestartPrompt() throws IOException {
+        DefaultVirtualTerminal terminal = new DefaultVirtualTerminal(new TerminalSize(80, 25));
+        TerminalScreen screen = new TerminalScreen(terminal);
+        screen.startScreen();
+        Player player = new Player(0, 0);
+        player.descendFloor();
+        player.descendFloor();
+        player.recordKill();
+        player.recordKill();
+        player.recordKill();
+        player.addPotion();
+        player.drinkPotion(5);
+        new LanternaRenderer(screen).renderDeath(player);
+        int y = Dungeon.HEIGHT / 2;
+        assertTrue(rowText(terminal, y).contains("You died"));
+        assertTrue(rowText(terminal, y + 2).contains("Floor reached: 3"));
+        assertTrue(rowText(terminal, y + 3).contains("Enemies killed: 3"));
+        assertTrue(rowText(terminal, y + 4).contains("Potions used: 1"));
+        assertTrue(rowText(terminal, y + 6).contains("Press [R] to restart, [Esc] to quit"));
+    }
 }

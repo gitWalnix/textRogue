@@ -64,14 +64,22 @@ public class LanternaRenderer implements Renderer {
     public void renderDeath(Player player) {
         screen.clear();
         TextGraphics g = screen.newTextGraphics();
-        g.setForegroundColor(TextColor.ANSI.RED);
-        String message = "You died";
-        int x = Math.max(0, (Dungeon.WIDTH - message.length()) / 2);
         int y = Dungeon.HEIGHT / 2;
-        g.putString(x, y, message);
+        g.setForegroundColor(TextColor.ANSI.RED);
+        drawCentered(g, y, "You died");
+        g.setForegroundColor(TextColor.ANSI.WHITE);
+        drawCentered(g, y + 2, "Floor reached: " + player.getFloor());
+        drawCentered(g, y + 3, "Enemies killed: " + player.getKillCount());
+        drawCentered(g, y + 4, "Potions used: " + player.getPotionsUsed());
+        drawCentered(g, y + 6, "Press [R] to restart, [Esc] to quit");
         try {
             screen.refresh();
         } catch (IOException ignored) {}
+    }
+
+    private void drawCentered(TextGraphics g, int y, String text) {
+        int x = Math.max(0, (Dungeon.WIDTH - text.length()) / 2);
+        g.putString(x, y, text);
     }
 
     private TextColor colorFor(Tile tile) {
