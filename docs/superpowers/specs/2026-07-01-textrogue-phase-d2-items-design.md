@@ -9,7 +9,7 @@ Two design choices carry over directly from Phase D1's fog-of-war work:
 1. **Potions are represented as a `Tile`, not a separate entity list.** Unlike enemies/projectiles (which move and must never render on stale/remembered position — the exact property Phase D1's tests were hardened to prove), a potion on the ground doesn't move once dropped. Modeling it as `Tile.POTION` means it rides the existing three-tier terrain rendering (visible / explored-dimmed / unexplored-blank) for free, with zero new rendering logic and zero risk of the entity-gating bug D1 just guarded against.
 2. **Drops are probabilistic, on enemy death, not pre-placed at dungeon generation.** This is a small roguelike-feel improvement over the original "items scattered at generation" idea, and it composes naturally with existing combat code (`Game.advanceProjectiles()` already has the killing blow's `(x, y)` in hand).
 
-Also bundled into this phase, at the user's request: a small input cleanup — `q` is dropped as a quit key (freeing it from ambiguity now that item-related single-letter commands are being added), leaving `Escape` as the sole quit binding.
+`q` stays bound to `QUIT` exactly as it is today — there's no actual conflict with `e` (the new drink-potion key), so there's no reason to remove a working quit binding. (An earlier draft of this design proposed dropping `q`; that was reversed after checking with the user.)
 
 ## What Changes
 
@@ -18,7 +18,7 @@ Also bundled into this phase, at the user's request: a small input cleanup — `
 | `world/Tile.java` | New enum constant `POTION` (glyph `!`) |
 | `entity/Player.java` | New `potionCount` field; `addPotion()`, `drinkPotion()`, `heal(int amount)`, `getPotionCount()` |
 | `input/Command.java` | New `DRINK_POTION` constant |
-| `input/LanternaInputHandler.java` | Bind `e` → `DRINK_POTION`; remove `q` → `QUIT` (Escape remains the only quit key) |
+| `input/LanternaInputHandler.java` | Bind `e` → `DRINK_POTION`; existing `q` → `QUIT` binding unchanged |
 | `Game.java` | New constants `POTION_DROP_CHANCE`, `POTION_HEAL_AMOUNT`; drop-on-kill logic in `advanceProjectiles()`; pickup logic in `tryMove()`; `DRINK_POTION` case in `processCommand()` |
 | `render/LanternaRenderer.java` | `colorFor(Tile)` gains a `POTION` case; status line gains `Potions: N` |
 
@@ -78,7 +78,7 @@ public enum Command {
 }
 ```
 
-In `toCommand(KeyStroke)`'s `Character` branch: add `case 'e' -> Command.DRINK_POTION;` and remove `case 'q' -> Command.QUIT;`. The `EOF, Escape -> Command.QUIT` branch is unchanged, so `Escape` remains the sole quit trigger. A bare `q` keypress now falls through to `Command.UNKNOWN` (a no-op), same as any other unbound letter.
+In `toCommand(KeyStroke)`'s `Character` branch: add `case 'e' -> Command.DRINK_POTION;`. The existing `case 'q' -> Command.QUIT;` and the `EOF, Escape -> Command.QUIT` branch are both unchanged — `q` and `Escape` continue to both quit, exactly as today.
 
 ### Game — drop on kill
 
@@ -95,7 +95,7 @@ if (hit != null) {
 ```
 
 ```java
-private void maybeDropPotion(int x, int y) {
+void maybeDropPotion(int x, int y) {
     if (dungeon.getTile(x, y) != Tile.FLOOR) return;
     if (random.nextDouble() < POTION_DROP_CHANCE) {
         dungeon.setTile(x, y, Tile.POTION);
@@ -104,6 +104,8 @@ private void maybeDropPotion(int x, int y) {
 ```
 
 Reuses the `Random random` field `Game` already has for `spawnEnemies()`. The `Tile.FLOOR` guard exists specifically to avoid overwriting `STAIRS_DOWN` in the edge case where an enemy dies while standing on it — the drop is simply skipped rather than attempting to preserve/restore the stairs tile underneath, keeping the logic single-branch and side-effect-free elsewhere.
+
+`maybeDropPotion` is package-private (no modifier), not `private` — it needs to be, matching the existing `spawnEnemies()`/`updateVisibility()` test-seam pattern, so `GameTest` can call it directly many times for the statistical drop-rate test below without driving a full projectile-kill cycle 1000 times.
 
 ### Game — pickup
 
@@ -154,13 +156,13 @@ Following existing JUnit 5 conventions (plain `@Test`, no mocking framework):
 
 - **PlayerTest additions**: `addPotion()` increments `getPotionCount()`; `heal()` caps at `MAX_HP` (does not overheal); `drinkPotion()` returns `true` and decrements count + heals when count > 0; `drinkPotion()` returns `false` and is a no-op (no HP change) when count is 0.
 - **TileTest additions**: `Tile.POTION.toChar()` returns `'!'`.
-- **LanternaInputHandlerTest additions**: `'e'` maps to `Command.DRINK_POTION`; `'q'` now maps to `Command.UNKNOWN` (not `QUIT`); `Escape` still maps to `Command.QUIT`.
+- **LanternaInputHandlerTest additions**: `'e'` maps to `Command.DRINK_POTION`. The existing `qKeyReturnsQuit` and `Escape`-maps-to-`QUIT` tests are untouched.
 - **LanternaRendererTest additions**: a `POTION` tile in `visibleTiles` renders `'!'`; status line contains `"Potions: N"` for a player with a nonzero potion count.
 - **GameTest additions**:
   - Pickup: place a `Tile.POTION` adjacent to the player, issue the matching move command, assert `player.getPotionCount()` increased by 1 and the tile is now `Tile.FLOOR`.
   - Drink: give the player a potion via `addPotion()`, damage them, issue `DRINK_POTION`, assert HP increased by `POTION_HEAL_AMOUNT` (capped at max) and potion count decreased.
-  - Drop-on-kill: since the roll is probabilistic, test with a seeded/deterministic angle — e.g. reduce to a boundary check by calling the drop path directly if it's package-private-testable, or run a kill enough times (with a fixed seed) to assert at least one drop occurs among many trials. Exact mechanism (seed injection vs. statistical loop) is an implementation-time call, not fixed here.
-  - Stairs-drop guard: an enemy killed while standing on `STAIRS_DOWN` does not overwrite the tile with `POTION` (tile remains `STAIRS_DOWN` regardless of the random roll — achievable deterministically by asserting the tile never changes across repeated trials, or by isolating `maybeDropPotion` for direct unit testing).
+  - Non-`FLOOR` guard is deterministic, not statistical: `maybeDropPotion`'s `Tile.FLOOR` check runs *before* the random roll, so calling it once on a `STAIRS_DOWN` (or `WALL`) tile is guaranteed to never place a potion regardless of RNG — a single-call assertion suffices, no trial loop or seeding needed.
+  - Drop-on-`FLOOR` chance is statistical: call `maybeDropPotion` many times (e.g. 1000) on fresh `FLOOR` tiles with the project's existing unseeded `Random`, and assert the resulting `POTION`-tile count falls within a generous tolerance band around the ~330 expected at `POTION_DROP_CHANCE = 0.33` (e.g. 250–410). This matches the non-seeded, range-based testing style already used for `spawnEnemies()`'s "3 to 5 enemies" assertion, rather than introducing a new seeded-`Random` test seam for this one case.
 
 ## Out of Scope for Phase D2
 
