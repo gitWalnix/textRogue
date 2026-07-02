@@ -175,4 +175,15 @@ class LanternaRendererTest {
         DefaultVirtualTerminal t = renderTo(withTileAt(2, 2, Tile.POTION), new Player(5, 5), List.of(), List.of(), allVisible());
         assertEquals('!', t.getCharacter(new TerminalPosition(2, 2)).getCharacter());
     }
+
+    @Test
+    void statusLineShowsPotionCount() throws IOException {
+        Player player = new Player(0, 0);
+        player.addPotion();
+        player.addPotion();
+        DefaultVirtualTerminal t = renderTo(allWalls(), player, List.of(), List.of(), allVisible());
+        StringBuilder sb = new StringBuilder();
+        for (int x = 0; x < 45; x++) sb.append(t.getCharacter(new TerminalPosition(x, Dungeon.HEIGHT)).getCharacter());
+        assertTrue(sb.toString().contains("Potions: 2"));
+    }
 }

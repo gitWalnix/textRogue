@@ -54,7 +54,7 @@ public class LanternaRenderer implements Renderer {
         g.setForegroundColor(TextColor.ANSI.GREEN_BRIGHT);
         g.putString(player.getX(), player.getY(), String.valueOf(player.getFacing().toChar()));
         g.setForegroundColor(TextColor.ANSI.WHITE);
-        g.putString(0, Dungeon.HEIGHT, "Floor: " + player.getFloor() + "   HP: " + player.getHp() + "/" + player.getMaxHp());
+        g.putString(0, Dungeon.HEIGHT, "Floor: " + player.getFloor() + "   HP: " + player.getHp() + "/" + player.getMaxHp() + "   Potions: " + player.getPotionCount());
         try {
             screen.refresh();
         } catch (IOException ignored) {}
