@@ -116,4 +116,34 @@ class PlayerTest {
         assertFalse(drank);
         assertEquals(20, player.getHp());
     }
+
+    @Test
+    void startsWithZeroKillsAndPotionsUsed() {
+        Player player = new Player(0, 0);
+        assertEquals(0, player.getKillCount());
+        assertEquals(0, player.getPotionsUsed());
+    }
+
+    @Test
+    void recordKillIncrementsKillCount() {
+        Player player = new Player(0, 0);
+        player.recordKill();
+        player.recordKill();
+        assertEquals(2, player.getKillCount());
+    }
+
+    @Test
+    void drinkPotionIncrementsPotionsUsedOnSuccess() {
+        Player player = new Player(0, 0);
+        player.addPotion();
+        player.drinkPotion(10);
+        assertEquals(1, player.getPotionsUsed());
+    }
+
+    @Test
+    void drinkPotionWithNoneDoesNotIncrementPotionsUsed() {
+        Player player = new Player(0, 0);
+        player.drinkPotion(10);
+        assertEquals(0, player.getPotionsUsed());
+    }
 }

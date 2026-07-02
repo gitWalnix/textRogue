@@ -9,6 +9,8 @@ public class Player {
     private int hp;
     private Facing facing;
     private int potionCount;
+    private int killCount;
+    private int potionsUsed;
 
     public Player(int x, int y) {
         this.x = x;
@@ -17,6 +19,8 @@ public class Player {
         this.hp = MAX_HP;
         this.facing = Facing.DOWN;
         this.potionCount = 0;
+        this.killCount = 0;
+        this.potionsUsed = 0;
     }
 
     public int getX() { return x; }
@@ -26,6 +30,8 @@ public class Player {
     public int getMaxHp() { return MAX_HP; }
     public Facing getFacing() { return facing; }
     public int getPotionCount() { return potionCount; }
+    public int getKillCount() { return killCount; }
+    public int getPotionsUsed() { return potionsUsed; }
 
     public void moveTo(int x, int y) {
         this.x = x;
@@ -57,9 +63,14 @@ public class Player {
         potionCount++;
     }
 
+    public void recordKill() {
+        killCount++;
+    }
+
     public boolean drinkPotion(int healAmount) {
         if (potionCount <= 0) return false;
         potionCount--;
+        potionsUsed++;
         heal(healAmount);
         return true;
     }
