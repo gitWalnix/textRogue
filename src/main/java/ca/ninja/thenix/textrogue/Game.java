@@ -223,7 +223,9 @@ public class Game {
         int count = MIN_ENEMIES + random.nextInt(MAX_ENEMIES - MIN_ENEMIES + 1);
         for (int i = 0; i < count; i++) {
             Room room = candidates.get(random.nextInt(candidates.size()));
-            enemies.add(new Enemy(room.centerX(), room.centerY(), ENEMY_HP));
+            int enemyX = room.x() + random.nextInt(room.width());
+            int enemyY = room.y() + random.nextInt(room.height());
+            enemies.add(new Enemy(enemyX, enemyY, ENEMY_HP));
         }
     }
 

@@ -104,8 +104,8 @@ class GameTest {
         game.spawnEnemies();
         assertTrue(game.enemies.size() >= 3 && game.enemies.size() <= 5);
         for (Enemy e : game.enemies) {
-            assertEquals(otherRoom.centerX(), e.getX());
-            assertEquals(otherRoom.centerY(), e.getY());
+            assertTrue(e.getX() >= otherRoom.x() && e.getX() < otherRoom.x() + otherRoom.width());
+            assertTrue(e.getY() >= otherRoom.y() && e.getY() < otherRoom.y() + otherRoom.height());
         }
     }
 
