@@ -207,6 +207,63 @@ class GameTest {
     }
 
     @Test
+    void enemyRoutesAroundWallToReachPlayer() {
+        // Direct path along row 12 is blocked at (41,12). The only route is the
+        // detour through row 11.
+        Dungeon dungeon = dungeonWithFloorAt(40, 12,
+                40, 11, 41, 11, 42, 11, 42, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        Enemy enemy = new Enemy(42, 12, 4);
+        game.enemies.add(enemy);
+        game.gameTick();
+        assertEquals(42, enemy.getX());
+        assertEquals(11, enemy.getY());
+    }
+
+    @Test
+    void enemyEventuallyReachesPlayerAfterRoutingAroundWall() {
+        Dungeon dungeon = dungeonWithFloorAt(40, 12,
+                40, 11, 41, 11, 42, 11, 42, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        Enemy enemy = new Enemy(42, 12, 4);
+        game.enemies.add(enemy);
+        int startHp = player.getHp();
+        for (int i = 0; i < 10; i++) game.gameTick();
+        assertTrue(player.getHp() < startHp,
+                "enemy should have routed around the wall and reached the player");
+    }
+
+    @Test
+    void enemyIsolatedFromPlayerStillMovesInsteadOfFreezing() {
+        // (44,12) and (45,12) are a two-tile pocket with no floor connection
+        // back to the player at (40,12) - fully unreachable, but still within
+        // CHASE_RADIUS by straight-line distance.
+        Dungeon dungeon = dungeonWithFloorAt(40, 12, 44, 12, 45, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        Enemy enemy = new Enemy(44, 12, 4);
+        game.enemies.add(enemy);
+        game.gameTick();
+        assertEquals(45, enemy.getX());
+        assertEquals(12, enemy.getY());
+    }
+
+    @Test
+    void enemyBoxedInOnAllSidesDoesNotMove() {
+        // (44,12) is a single isolated floor tile - every neighbor is a wall.
+        Dungeon dungeon = dungeonWithFloorAt(40, 12, 44, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        Enemy enemy = new Enemy(44, 12, 4);
+        game.enemies.add(enemy);
+        game.gameTick();
+        assertEquals(44, enemy.getX());
+        assertEquals(12, enemy.getY());
+    }
+
+    @Test
     void adjacentEnemyDamagesPlayerInsteadOfMoving() {
         Dungeon dungeon = dungeonWithFloorAt(40, 12, 41, 12);
         Player player = new Player(40, 12);

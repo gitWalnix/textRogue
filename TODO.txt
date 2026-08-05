@@ -1,5 +1,4 @@
 Sometimes a projectile seems to go through an enemy, seems to happen if two enemies are stacked?
-Enemies get stuck on walls, no pathfinding
 enemies can spawn on the same tile
 Enemies do damage very fast, maybe they should move slower than a player?
 ability to go up floors as well as down, to go back to rooms you've cleared?

@@ -11,6 +11,7 @@ import ca.ninja.thenix.textrogue.render.Renderer;
 import ca.ninja.thenix.textrogue.vision.RadiusVisibilityCalculator;
 import ca.ninja.thenix.textrogue.vision.VisibilityCalculator;
 import ca.ninja.thenix.textrogue.world.Dungeon;
+import ca.ninja.thenix.textrogue.world.PathFinder;
 import ca.ninja.thenix.textrogue.world.Position;
 import ca.ninja.thenix.textrogue.world.Room;
 import ca.ninja.thenix.textrogue.world.Tile;
@@ -179,6 +180,8 @@ public class Game {
             if (e.isAlive()) occupied.add(tileKey(e.getX(), e.getY()));
         }
 
+        int[][] distances = PathFinder.distanceField(dungeon, player.getX(), player.getY());
+
         for (Enemy enemy : enemies) {
             if (!enemy.isAlive()) continue;
 
@@ -186,7 +189,9 @@ public class Game {
             int distY = Math.abs(enemy.getY() - player.getY());
             if (Math.max(distX, distY) > CHASE_RADIUS) continue;
 
-            int[] step = chaseStep(enemy.getX(), enemy.getY(), player.getX(), player.getY());
+            int[] step = bestStep(enemy.getX(), enemy.getY(), distances, occupied);
+            if (step == null) continue;
+
             int nx = enemy.getX() + step[0];
             int ny = enemy.getY() + step[1];
 
@@ -194,13 +199,43 @@ public class Game {
                 player.takeDamage(ENEMY_CONTACT_DAMAGE);
                 continue;
             }
-            if (dungeon.getTile(nx, ny) == Tile.WALL) continue;
-            if (occupied.contains(tileKey(nx, ny))) continue;
 
             occupied.remove(tileKey(enemy.getX(), enemy.getY()));
             occupied.add(tileKey(nx, ny));
             enemy.moveTo(nx, ny);
         }
+    }
+
+    private static final int[][] CARDINAL_DIRECTIONS = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+
+    private int[] bestStep(int x, int y, int[][] distances, java.util.Set<Long> occupied) {
+        List<int[]> candidates = new ArrayList<>();
+        for (int[] dir : CARDINAL_DIRECTIONS) {
+            int nx = x + dir[0];
+            int ny = y + dir[1];
+            if (dungeon.getTile(nx, ny) == Tile.WALL) continue;
+            if (occupied.contains(tileKey(nx, ny))) continue;
+            candidates.add(dir);
+        }
+        if (candidates.isEmpty()) return null;
+
+        int bestRank = Integer.MAX_VALUE;
+        for (int[] dir : candidates) {
+            bestRank = Math.min(bestRank, rank(distances[y + dir[1]][x + dir[0]]));
+        }
+
+        int[] tieBreak = chaseStep(x, y, player.getX(), player.getY());
+        int[] fallback = null;
+        for (int[] dir : candidates) {
+            if (rank(distances[y + dir[1]][x + dir[0]]) != bestRank) continue;
+            if (fallback == null) fallback = dir;
+            if (dir[0] == tieBreak[0] && dir[1] == tieBreak[1]) return dir;
+        }
+        return fallback;
+    }
+
+    private static int rank(int distance) {
+        return distance == PathFinder.UNREACHABLE ? Integer.MAX_VALUE : distance;
     }
 
     private static long tileKey(int x, int y) {
