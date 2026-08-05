@@ -223,6 +223,7 @@ public class Game {
         for (int[] dir : candidates) {
             bestRank = Math.min(bestRank, rank(distances[y + dir[1]][x + dir[0]]));
         }
+        if (bestRank > rank(distances[y][x])) return null;
 
         int[] tieBreak = chaseStep(x, y, player.getX(), player.getY());
         int[] fallback = null;

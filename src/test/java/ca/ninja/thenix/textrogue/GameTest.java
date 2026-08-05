@@ -264,6 +264,49 @@ class GameTest {
     }
 
     @Test
+    void enemyTieBreakPrefersChaseStepAxisAmongTiedCandidates() {
+        // Open 5x5 floor block (x:38-42, y:10-14). Player at center (40,12).
+        // Enemy at (42,10) is Manhattan-distance 4 from the player, with two
+        // neighbors tied at distance 3: (41,10) [stepping left] and (42,11)
+        // [stepping down]. chaseStep(42,10,40,12) has dx=-2, dy=2 (equal
+        // magnitude), and chaseStep prefers dx when |dx| >= |dy|, so it
+        // resolves the tie in favor of the left step, (41,10).
+        Tile[][] tiles = new Tile[Dungeon.HEIGHT][Dungeon.WIDTH];
+        for (Tile[] row : tiles) Arrays.fill(row, Tile.WALL);
+        for (int x = 38; x <= 42; x++) {
+            for (int y = 10; y <= 14; y++) {
+                tiles[y][x] = Tile.FLOOR;
+            }
+        }
+        Dungeon dungeon = new Dungeon(tiles, List.of(), 40, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        Enemy enemy = new Enemy(42, 10, 4);
+        game.enemies.add(enemy);
+        game.gameTick();
+        assertEquals(41, enemy.getX());
+        assertEquals(10, enemy.getY());
+    }
+
+    @Test
+    void enemyWaitsInsteadOfRetreatingWhenForwardTileBlockedByPeer() {
+        // A 1-wide corridor: player(40,12) - leader(41,12, adjacent, attacks
+        // every tick instead of moving) - follower(42,12). The follower's only
+        // open neighbor is (43,12), which is farther from the player than its
+        // own tile (42,12) - a strict retreat. It must stand still instead.
+        Dungeon dungeon = dungeonWithFloorAt(40, 12, 41, 12, 42, 12, 43, 12);
+        Player player = new Player(40, 12);
+        Game game = gameWithInjectedState(dungeon, player);
+        Enemy leader = new Enemy(41, 12, 4);
+        Enemy follower = new Enemy(42, 12, 4);
+        game.enemies.add(leader);
+        game.enemies.add(follower);
+        game.gameTick();
+        assertEquals(42, follower.getX());
+        assertEquals(12, follower.getY());
+    }
+
+    @Test
     void adjacentEnemyDamagesPlayerInsteadOfMoving() {
         Dungeon dungeon = dungeonWithFloorAt(40, 12, 41, 12);
         Player player = new Player(40, 12);
